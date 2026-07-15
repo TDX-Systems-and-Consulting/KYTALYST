@@ -104,7 +104,26 @@
     margin:20px 20px 0; padding:10px 14px; background:rgba(213,127,66,0.08); border:1px dashed var(--copper);
     border-radius:2px; font-family:var(--mono); font-size:10.5px; color:var(--copper-bright); line-height:1.6;
   }
+
+  /* Places Autocomplete container — wraps Google's element to match the existing input look */
+  .address-autocomplete-wrap{
+    flex:1; background:var(--card); border:1px solid var(--line); border-radius:2px;
+    display:flex; align-items:stretch; overflow:hidden;
+  }
+  .address-autocomplete-wrap gmp-place-autocomplete{
+    width:100%;
+    --gmp-mat-color-surface: transparent;
+    --gmp-mat-color-on-surface: var(--paper);
+    --gmp-mat-color-on-surface-variant: var(--muted);
+    --gmp-mat-color-outline: transparent;
+  }
 </style>
+<script>
+  (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+    key: "AIzaSyBBJGJy8fxsb5C63eCXQnq1MN14OX8D5-0",
+    v: "beta"
+  });
+</script>
 </head>
 <body>
 
@@ -118,7 +137,8 @@
   <div class="search-panel">
     <label class="search-label">Property Address</label>
     <div class="search-row">
-      <input type="text" id="addressInput" placeholder="e.g. 684 Dundee Ct, Wentzville, MO" value="684 Dundee Ct, Wentzville, MO 63385">
+      <div class="address-autocomplete-wrap" id="autocompleteMount"></div>
+      <input type="hidden" id="addressInput" value="684 Dundee Ct, Wentzville, MO 63385">
       <button class="scan-btn" id="scanBtn" onclick="runScan()">Scan</button>
     </div>
     <div class="status-line" id="statusLine"></div>
@@ -138,6 +158,56 @@
 <script>
 // Live KYTALYST backend — deployed 7/15/26
 const CLOUD_FUNCTION_URL = "https://kytalystscan-1061786207687.us-central1.run.app";
+
+// --- Google Places Autocomplete (frontend-only; does not touch kytalystScan or RentCast calls) ---
+(async function initAutocomplete(){
+  try {
+    const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
+
+    const autocompleteEl = new PlaceAutocompleteElement({
+      includedRegionCodes: ["us"],
+      includedPrimaryTypes: ["street_address", "premise", "subpremise"]
+    });
+    autocompleteEl.placeholder = "e.g. 684 Dundee Ct, Wentzville, MO";
+    document.getElementById('autocompleteMount').appendChild(autocompleteEl);
+
+    const hiddenInput = document.getElementById('addressInput');
+
+    // Pre-fill the visible field with the default test address (best-effort; non-breaking if unsupported)
+    try { autocompleteEl.value = hiddenInput.value; } catch(_) {}
+
+    // Fallback: if the user types a full address but never picks a dropdown suggestion,
+    // keep the hidden field in sync with their raw typed text so Scan still works.
+    autocompleteEl.addEventListener('input', () => {
+      if (typeof autocompleteEl.value === 'string') {
+        hiddenInput.value = autocompleteEl.value;
+      }
+    });
+
+    // On selection: parse into clean, structured "Street, City, State, Zip" — what RentCast expects.
+    autocompleteEl.addEventListener('gmp-select', async ({ placePrediction }) => {
+      const place = placePrediction.toPlace();
+      await place.fetchFields({ fields: ['addressComponents', 'formattedAddress'] });
+
+      const comps = place.addressComponents || [];
+      const get = (type) => comps.find(c => c.types && c.types.includes(type));
+
+      const streetNumber = get('street_number')?.longText || '';
+      const route = get('route')?.longText || '';
+      const city = (get('locality') || get('sublocality'))?.longText || '';
+      const state = get('administrative_area_level_1')?.shortText || '';
+      const zip = get('postal_code')?.longText || '';
+
+      const streetLine = [streetNumber, route].filter(Boolean).join(' ');
+      const cleanAddress = [streetLine, city, [state, zip].filter(Boolean).join(' ')]
+        .filter(Boolean).join(', ');
+
+      hiddenInput.value = cleanAddress || place.formattedAddress || autocompleteEl.value || '';
+    });
+  } catch (err) {
+    console.warn('Places Autocomplete failed to load — manual address entry via the hidden default still works:', err);
+  }
+})();
 
 function estimateRehab(sqft, yearBuilt){
   const currentYear = new Date().getFullYear();
