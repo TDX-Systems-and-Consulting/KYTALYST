@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>KYTALYST — Deal Scanner</title>
+<style>
+  :root{
+    --ink:#12181f;
+    --paper:#eef0ea;
+    --card:#1b232c;
+    --line:#2c3641;
+    --copper:#b5652f;
+    --copper-bright:#d97f42;
+    --green:#4f8f5b;
+    --red:#b1483f;
+    --muted:#8592a0;
+    --mono: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace;
+    --serif: Georgia, 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0;padding:0;background:var(--ink);color:var(--paper);font-family:var(--sans);}
+  body{min-height:100vh; padding-bottom:60px;}
+
+  .topbar{
+    padding:22px 20px 18px;
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:baseline; justify-content:space-between;
+  }
+  .wordmark{font-family:var(--serif); font-size:22px; letter-spacing:0.5px; font-weight:700; color:var(--paper);}
+  .wordmark span{color:var(--copper-bright);}
+  .tagline{font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px;}
+
+  .search-panel{padding:24px 20px 8px;}
+  .search-label{font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px; display:block;}
+  .search-row{display:flex; gap:8px;}
+  input[type="text"]{
+    flex:1; background:var(--card); border:1px solid var(--line); color:var(--paper);
+    font-family:var(--sans); font-size:16px; padding:14px 14px; border-radius:2px; outline:none;
+  }
+  input[type="text"]:focus{border-color:var(--copper);}
+  input[type="text"]::placeholder{color:var(--muted);}
+  button.scan-btn{
+    background:var(--copper); color:#fff; border:none; font-family:var(--mono);
+    font-size:13px; letter-spacing:0.5px; text-transform:uppercase; font-weight:600;
+    padding:0 20px; border-radius:2px; cursor:pointer; white-space:nowrap;
+  }
+  button.scan-btn:active{background:var(--copper-bright);}
+  button.scan-btn:disabled{background:#3a4048; color:var(--muted); cursor:default;}
+
+  .status-line{
+    font-family:var(--mono); font-size:12px; color:var(--muted); padding:14px 20px 0; min-height:18px;
+  }
+
+  .verdict-banner{
+    margin:22px 20px 0; padding:20px; border-radius:3px; border:1px solid;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .verdict-banner.deal{ background:rgba(79,143,91,0.12); border-color:var(--green); }
+  .verdict-banner.nodeal{ background:rgba(177,72,63,0.12); border-color:var(--red); }
+  .verdict-word{font-family:var(--serif); font-size:28px; font-weight:700;}
+  .verdict-banner.deal .verdict-word{color:var(--green);}
+  .verdict-banner.nodeal .verdict-word{color:#e08b83;}
+  .verdict-sub{font-family:var(--mono); font-size:12px; color:var(--muted); margin-top:4px;}
+  .verdict-profit{text-align:right;}
+  .verdict-profit .num{font-family:var(--mono); font-size:22px; font-weight:600;}
+  .verdict-profit .lbl{font-family:var(--mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;}
+
+  .metrics-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line);
+    margin:16px 20px 0; border:1px solid var(--line); border-radius:3px; overflow:hidden;
+  }
+  .metric-cell{background:var(--card); padding:14px 16px;}
+  .metric-cell .lbl{font-family:var(--mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; display:block; margin-bottom:6px;}
+  .metric-cell .val{font-family:var(--mono); font-size:17px; font-weight:600; color:var(--paper);}
+
+  .section{margin:24px 20px 0;}
+  .section-head{font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px;}
+
+  .chip-row{display:flex; flex-wrap:wrap; gap:6px;}
+  .chip{
+    font-family:var(--mono); font-size:11px; background:rgba(213,127,66,0.15); color:var(--copper-bright);
+    padding:5px 10px; border-radius:20px; border:1px solid rgba(213,127,66,0.3);
+  }
+
+  .comp-row{
+    display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line);
+    font-family:var(--mono); font-size:13px;
+  }
+  .comp-row:last-child{border-bottom:none;}
+  .comp-addr{color:var(--paper);}
+  .comp-price{color:var(--muted);}
+
+  .rehab-breakdown{font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.9;}
+  .rehab-breakdown .rline{display:flex; justify-content:space-between;}
+  .rehab-breakdown .rline b{color:var(--paper); font-weight:500;}
+
+  .empty-state{padding:60px 20px; text-align:center;}
+  .empty-state .glyph{font-size:32px; opacity:0.3; margin-bottom:14px;}
+  .empty-state p{font-family:var(--mono); font-size:12px; color:var(--muted); max-width:280px; margin:0 auto; line-height:1.7;}
+
+  .mock-note{
+    margin:20px 20px 0; padding:10px 14px; background:rgba(213,127,66,0.08); border:1px dashed var(--copper);
+    border-radius:2px; font-family:var(--mono); font-size:10.5px; color:var(--copper-bright); line-height:1.6;
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div>
+      <div class="wordmark">KYTA<span>LYST</span></div>
+      <div class="tagline">Deal Scanner</div>
+    </div>
+  </div>
+
+  <div class="search-panel">
+    <label class="search-label">Property Address</label>
+    <div class="search-row">
+      <input type="text" id="addressInput" placeholder="e.g. 684 Dundee Ct, Wentzville, MO" value="684 Dundee Ct, Wentzville, MO 63385">
+      <button class="scan-btn" id="scanBtn" onclick="runScan()">Scan</button>
+    </div>
+    <div class="status-line" id="statusLine"></div>
+  </div>
+
+  <div id="mockNotice" class="mock-note" style="display:none;">
+    Running on mock data — the backend endpoint isn't reachable. Numbers below are realistic placeholders so the UI/flow can be reviewed now.
+  </div>
+
+  <div id="resultsWrap"></div>
+
+  <div class="empty-state" id="emptyState">
+    <div class="glyph">⌂</div>
+    <p>Enter an address and scan for ARV, rehab estimate, and a deal / no deal verdict.</p>
+  </div>
+
+<script>
+// Live KYTALYST backend — deployed 7/15/26
+const CLOUD_FUNCTION_URL = "https://kytalystscan-1061786207687.us-central1.run.app";
+
+function estimateRehab(sqft, yearBuilt){
+  const currentYear = new Date().getFullYear();
+  const age = currentYear - (yearBuilt || currentYear - 40);
+  let base = 25000;
+  base += age > 40 ? 3000 : (age > 20 ? 1000 : 0);
+  const over2000 = Math.max(0, Math.floor((sqft - 2000) / 500));
+  base += over2000 * 3000;
+  const unknownsBuffer = base * 0.25;
+  return { base: Math.round(base), unknownsBuffer: Math.round(unknownsBuffer), total: Math.round(base + unknownsBuffer) };
+}
+
+function evaluateDeal({ listPrice, arv, rehabTotal, wantedProfit }){
+  const closingCosts = listPrice * 0.035;
+  const sellingCosts = arv * (0.0125 + 0.03 + 0.06);
+  const allInCost = listPrice + rehabTotal + closingCosts;
+  const netSalePrice = arv - sellingCosts;
+  const projectedProfit = netSalePrice - allInCost;
+  const isDeal = projectedProfit >= wantedProfit;
+  const mao = arv - sellingCosts - rehabTotal - closingCosts - wantedProfit;
+  return { projectedProfit: Math.round(projectedProfit), isDeal, mao: Math.round(mao), allInCost: Math.round(allInCost) };
+}
+
+function money(n){
+  const sign = n < 0 ? "-" : "";
+  return sign + "$" + Math.abs(Math.round(n)).toLocaleString();
+}
+
+async function fetchMockScan(address){
+  await new Promise(r => setTimeout(r, 900));
+  const sqft = 1657, yearBuilt = 2004, listPrice = 160000, arv = 255000;
+  const rehab = estimateRehab(sqft, yearBuilt);
+  return {
+    address, sqft, yearBuilt, listPrice, arv,
+    distressSignals: ["as-is", "estate sale", "TLC"],
+    rehabTier: "heavy",
+    rehab,
+    comps: [
+      { addr: "23 Crimson Leaf Ct", price: 249900 },
+      { addr: "27 Crimson Leaf Ct", price: 258500 },
+      { addr: "29 Crimson Leaf Ct", price: 251000 }
+    ]
+  };
+}
+
+async function fetchRealScan(address){
+  const res = await fetch(CLOUD_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ address })
+  });
+  if(!res.ok){
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.error || ("Backend returned " + res.status));
+  }
+  return await res.json();
+}
+
+async function runScan(){
+  const address = document.getElementById('addressInput').value.trim();
+  if(!address) return;
+  const btn = document.getElementById('scanBtn');
+  const statusLine = document.getElementById('statusLine');
+  btn.disabled = true;
+  statusLine.textContent = "Pulling property data + comps…";
+  document.getElementById('resultsWrap').innerHTML = "";
+  document.getElementById('emptyState').style.display = "none";
+  document.getElementById('mockNotice').style.display = "none";
+
+  let data;
+  let usingMock = false;
+  try{
+    data = await fetchRealScan(address);
+  }catch(err){
+    console.warn("Live backend failed, falling back to mock:", err.message);
+    usingMock = true;
+    try{
+      data = await fetchMockScan(address);
+    }catch(mockErr){
+      statusLine.textContent = "Scan failed: " + err.message;
+      btn.disabled = false;
+      return;
+    }
+  }
+
+  document.getElementById('mockNotice').style.display = usingMock ? "block" : "none";
+  statusLine.textContent = usingMock ? "" : "";
+  btn.disabled = false;
+
+  const wantedProfit = 20000;
+  const deal = evaluateDeal({ listPrice: data.listPrice, arv: data.arv, rehabTotal: data.rehab.total, wantedProfit });
+
+  const wrap = document.getElementById('resultsWrap');
+  wrap.innerHTML = `
+    <div class="verdict-banner ${deal.isDeal ? 'deal' : 'nodeal'}">
+      <div>
+        <div class="verdict-word">${deal.isDeal ? 'DEAL' : 'NO DEAL'}</div>
+        <div class="verdict-sub">${data.address}</div>
+      </div>
+      <div class="verdict-profit">
+        <div class="num">${money(deal.projectedProfit)}</div>
+        <div class="lbl">Projected Profit</div>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-cell"><span class="lbl">List Price</span><span class="val">${money(data.listPrice)}</span></div>
+      <div class="metric-cell"><span class="lbl">ARV</span><span class="val">${money(data.arv)}</span></div>
+      <div class="metric-cell"><span class="lbl">Rehab Estimate</span><span class="val">${money(data.rehab.total)}</span></div>
+      <div class="metric-cell"><span class="lbl">Max Offer (MAO)</span><span class="val">${money(deal.mao)}</span></div>
+      <div class="metric-cell"><span class="lbl">Sqft</span><span class="val">${(data.sqft || 0).toLocaleString()}</span></div>
+      <div class="metric-cell"><span class="lbl">Year Built</span><span class="val">${data.yearBuilt || "—"}</span></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">Distress Signals · ${data.rehabTier} rehab tier</div>
+      <div class="chip-row">
+        ${(data.distressSignals && data.distressSignals.length) ? data.distressSignals.map(s => `<span class="chip">${s}</span>`).join('') : '<span class="chip">none detected</span>'}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">Rehab Breakdown</div>
+      <div class="rehab-breakdown">
+        <div class="rline"><span>Base estimate (age/size)</span><b>${money(data.rehab.base)}</b></div>
+        <div class="rline"><span>Unknowns buffer (25%)</span><b>${money(data.rehab.unknownsBuffer)}</b></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">Comparable Sales</div>
+      ${(data.comps && data.comps.length) ? data.comps.map(c => `<div class="comp-row"><span class="comp-addr">${c.addr}</span><span class="comp-price">${money(c.price)}</span></div>`).join('') : '<div class="comp-row"><span class="comp-addr">No comps returned</span></div>'}
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
