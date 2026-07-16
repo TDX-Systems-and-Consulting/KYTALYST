@@ -108,7 +108,7 @@
   /* Places Autocomplete container — wraps Google's element to match the existing input look */
   .address-autocomplete-wrap{
     flex:1; background:var(--card); border:1px solid var(--line); border-radius:2px;
-    display:flex; align-items:stretch; overflow:hidden;
+    display:flex; align-items:stretch; position:relative; z-index:10;
   }
   .address-autocomplete-wrap gmp-place-autocomplete{
     width:100%;
