@@ -138,7 +138,7 @@
     <label class="search-label">Property Address</label>
     <div class="search-row">
       <div class="address-autocomplete-wrap" id="autocompleteMount"></div>
-      <input type="hidden" id="addressInput" value="684 Dundee Ct, Wentzville, MO 63385">
+      <input type="hidden" id="addressInput" value="">
       <button class="scan-btn" id="scanBtn" onclick="runScan()">Scan</button>
     </div>
     <div class="status-line" id="statusLine"></div>
@@ -172,9 +172,6 @@ const CLOUD_FUNCTION_URL = "https://kytalystscan-1061786207687.us-central1.run.a
     document.getElementById('autocompleteMount').appendChild(autocompleteEl);
 
     const hiddenInput = document.getElementById('addressInput');
-
-    // Pre-fill the visible field with the default test address (best-effort; non-breaking if unsupported)
-    try { autocompleteEl.value = hiddenInput.value; } catch(_) {}
 
     // Fallback: if the user types a full address but never picks a dropdown suggestion,
     // keep the hidden field in sync with their raw typed text so Scan still works.
