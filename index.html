@@ -63,6 +63,13 @@
   .verdict-banner.deal .verdict-word{color:var(--green);}
   .verdict-banner.nodeal .verdict-word{color:#e08b83;}
   .verdict-sub{font-family:var(--mono); font-size:12px; color:var(--muted); margin-top:4px;}
+  .status-badge{
+    display:inline-block; margin-top:8px; font-family:var(--mono); font-size:10.5px;
+    font-weight:600; letter-spacing:0.5px; text-transform:uppercase;
+    padding:3px 9px; border-radius:20px; border:1px solid;
+  }
+  .status-badge.active{ color:var(--green); border-color:var(--green); background:rgba(79,143,91,0.12); }
+  .status-badge.inactive{ color:#e08b83; border-color:var(--red); background:rgba(177,72,63,0.12); }
   .verdict-profit{text-align:right;}
   .verdict-profit .num{font-family:var(--mono); font-size:22px; font-weight:600;}
   .verdict-profit .lbl{font-family:var(--mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;}
@@ -239,6 +246,7 @@ async function fetchMockScan(address){
   const rehab = estimateRehab(sqft, yearBuilt);
   return {
     address, sqft, yearBuilt, listPrice, arv,
+    listingStatus: "Active",
     distressSignals: ["as-is", "estate sale", "TLC"],
     rehabTier: "heavy",
     rehab,
@@ -303,6 +311,9 @@ async function runScan(){
       <div>
         <div class="verdict-word">${deal.isDeal ? 'DEAL' : 'NO DEAL'}</div>
         <div class="verdict-sub">${data.address}</div>
+        <div class="status-badge ${data.listingStatus === 'Active' ? 'active' : 'inactive'}">
+          ${data.listingStatus === 'Active' ? 'Active on Market' : 'Not Actively Listed'}
+        </div>
       </div>
       <div class="verdict-profit">
         <div class="num">${money(deal.projectedProfit)}</div>
