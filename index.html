@@ -19,6 +19,17 @@
     --serif: Georgia, 'Times New Roman', serif;
     --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
+  :root[data-theme="light"]{
+    --ink:#f2efe6;
+    --paper:#1c2420;
+    --card:#ffffff;
+    --line:#d8d3c4;
+    --copper:#a8481f;
+    --copper-bright:#c25a2a;
+    --green:#2f6b3f;
+    --red:#a8382f;
+    --muted:#6b6b60;
+  }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{margin:0;padding:0;background:var(--ink);color:var(--paper);font-family:var(--sans);}
   body{min-height:100vh; padding-bottom:60px;}
@@ -31,6 +42,13 @@
   .wordmark{font-family:var(--serif); font-size:22px; letter-spacing:0.5px; font-weight:700; color:var(--paper);}
   .wordmark span{color:var(--copper-bright);}
   .tagline{font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px;}
+
+  .theme-toggle{
+    background:transparent; border:1px solid var(--line); color:var(--muted);
+    font-family:var(--mono); font-size:11px; letter-spacing:0.5px; text-transform:uppercase;
+    padding:6px 12px; border-radius:20px; cursor:pointer; align-self:flex-start;
+  }
+  .theme-toggle:active{ border-color:var(--copper); color:var(--copper-bright); }
 
   .search-panel{padding:24px 20px 8px;}
   .search-label{font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px; display:block;}
@@ -139,6 +157,7 @@
       <div class="wordmark">KYTA<span>LYST</span></div>
       <div class="tagline">Deal Scanner</div>
     </div>
+    <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀ Light</button>
   </div>
 
   <div class="search-panel">
@@ -163,6 +182,19 @@
   </div>
 
 <script>
+// --- Light/Dark theme toggle (same pattern as JOBSpan) ---
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('kytalyst-theme', theme);
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = theme === 'light' ? '🌙 Dark' : '☀ Light';
+}
+function toggleTheme(){
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  applyTheme(current === 'light' ? 'dark' : 'light');
+}
+applyTheme(localStorage.getItem('kytalyst-theme') || 'dark');
+
 // Live KYTALYST backend — deployed 7/15/26
 const CLOUD_FUNCTION_URL = "https://kytalystscan-1061786207687.us-central1.run.app";
 
