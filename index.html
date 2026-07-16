@@ -173,6 +173,24 @@
   .wt-empty{font-family:var(--mono); font-size:11.5px; color:var(--muted); padding:8px 0;}
   .wt-source-note{font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:10px; line-height:1.5;}
 
+  .wt-search-results{
+    max-height:260px; overflow-y:auto; border:1px solid var(--line); border-radius:2px; margin-bottom:8px;
+  }
+  .wt-search-row{
+    display:flex; justify-content:space-between; align-items:center; padding:10px 12px;
+    border-bottom:1px solid var(--line); cursor:pointer;
+  }
+  .wt-search-row:last-child{border-bottom:none;}
+  .wt-search-row:active, .wt-search-row.selected{background:rgba(213,127,66,0.12);}
+  .wt-search-main{font-family:var(--sans); font-size:13.5px; color:var(--paper);}
+  .wt-search-sub{font-family:var(--mono); font-size:10.5px; color:var(--muted); margin-top:2px;}
+  .wt-search-price{font-family:var(--mono); font-size:13px; color:var(--copper-bright); font-weight:600; white-space:nowrap; padding-left:10px;}
+
+  .formula-muted{
+    font-family:var(--mono); font-size:11px; color:var(--muted); font-style:italic;
+    padding:4px 0;
+  }
+
   .empty-state{padding:60px 20px; text-align:center;}
   .empty-state .glyph{font-size:32px; opacity:0.3; margin-bottom:14px;}
   .empty-state p{font-family:var(--mono); font-size:12px; color:var(--muted); max-width:280px; margin:0 auto; line-height:1.7;}
@@ -270,35 +288,40 @@ function walkthroughTotal(){
   return walkthroughItems.reduce((sum, it) => sum + it.unitCost * it.qty, 0);
 }
 
-function populateWalkthroughDropdowns(){
-  const tradeSel = document.getElementById('wtTrade');
-  if (!tradeSel) return;
-  tradeSel.innerHTML = catalogTrades().map(t => `<option value="${t}">${t}</option>`).join('');
-  onTradeChange();
+let currentSearchMatches = [];
+let selectedCatalogItem = null;
+
+function filterCatalogSearch(){
+  const q = (document.getElementById('wtSearch').value || '').toLowerCase().trim();
+  const resultsEl = document.getElementById('wtSearchResults');
+  selectedCatalogItem = null;
+  if (!q) { resultsEl.innerHTML = ''; return; }
+  currentSearchMatches = CATALOG.filter(r =>
+    (r.p + ' ' + r.t + ' ' + r.tl + ' ' + (r.d || '')).toLowerCase().includes(q)
+  ).slice(0, 8);
+  resultsEl.innerHTML = currentSearchMatches.length ? currentSearchMatches.map((r, i) => `
+    <div class="wt-search-row" onclick="selectCatalogItem(${i})">
+      <div>
+        <div class="wt-search-main">${r.p} — ${r.tl}</div>
+        <div class="wt-search-sub">${r.t}</div>
+      </div>
+      <div class="wt-search-price">${money(r.c)}</div>
+    </div>
+  `).join('') : '<div class="wt-search-row" style="cursor:default;"><div class="wt-search-sub">No matches — try a different word</div></div>';
 }
-function onTradeChange(){
-  const trade = document.getElementById('wtTrade').value;
-  const pkgSel = document.getElementById('wtPackage');
-  pkgSel.innerHTML = catalogPackages(trade).map(p => `<option value="${p}">${p}</option>`).join('');
-  onPackageChange();
-}
-function onPackageChange(){
-  const trade = document.getElementById('wtTrade').value;
-  const pkg = document.getElementById('wtPackage').value;
-  const tierSel = document.getElementById('wtTier');
-  const tiers = catalogTiers(trade, pkg);
-  tierSel.innerHTML = tiers.map(r => `<option value="${r.tier}">${r.tl} — ${money(r.c)}</option>`).join('');
+function selectCatalogItem(i){
+  selectedCatalogItem = currentSearchMatches[i];
+  document.getElementById('wtSearch').value = `${selectedCatalogItem.p} — ${selectedCatalogItem.tl}`;
+  document.getElementById('wtSearchResults').innerHTML = '';
 }
 function addWalkthroughItem(){
-  const trade = document.getElementById('wtTrade').value;
-  const pkg = document.getElementById('wtPackage').value;
-  const tier = document.getElementById('wtTier').value;
+  if (!selectedCatalogItem) return;
   const qty = Math.max(1, parseInt(document.getElementById('wtQty').value, 10) || 1);
-  const record = catalogTiers(trade, pkg).find(r => r.tier === tier);
-  if (!record) return;
   walkthroughItems.push({
-    trade, pkg, tierLabel: record.tl, unitCost: record.c, qty
+    trade: selectedCatalogItem.t, pkg: selectedCatalogItem.p, tierLabel: selectedCatalogItem.tl,
+    unitCost: selectedCatalogItem.c, qty
   });
+  selectedCatalogItem = null;
   renderResults();
 }
 function removeWalkthroughItem(idx){
@@ -507,26 +530,13 @@ function renderResults(){
     </div>
 
     <div class="section">
-      <div class="section-head">Formula Rehab Estimate (age/size guess — replace with walkthrough below)</div>
-      <div class="rehab-breakdown">
-        <div class="rline"><span>Base estimate (age/size)</span><b>${money(data.rehab.base)}</b></div>
-        <div class="rline"><span>Unknowns buffer (25%)</span><b>${money(data.rehab.unknownsBuffer)}</b></div>
-      </div>
-    </div>
-
-    <div class="section">
       <div class="section-head">Live Walkthrough — Real JOBSpan Pricing</div>
       <div class="walkthrough-box">
-        <div class="wt-row">
-          <select id="wtTrade" onchange="onTradeChange()"></select>
-          <select id="wtPackage" onchange="onPackageChange()"></select>
-        </div>
-        <div class="wt-row">
-          <select id="wtTier"></select>
-          <div class="wt-qty-add">
-            <input type="number" id="wtQty" value="1" min="1">
-            <button class="wt-add-btn" onclick="addWalkthroughItem()">Add</button>
-          </div>
+        <input type="text" id="wtSearch" placeholder="Search a package — e.g. faucet, HVAC, drywall..." oninput="filterCatalogSearch()" autocomplete="off">
+        <div class="wt-search-results" id="wtSearchResults"></div>
+        <div class="wt-qty-add">
+          <input type="number" id="wtQty" value="1" min="1">
+          <button class="wt-add-btn" onclick="addWalkthroughItem()">Add</button>
         </div>
 
         ${walkthroughItems.length ? walkthroughItems.map((it, i) => `
@@ -540,7 +550,7 @@ function renderResults(){
               <button class="wt-remove" onclick="removeWalkthroughItem(${i})">Remove</button>
             </div>
           </div>
-        `).join('') : '<div class="wt-empty">No items added yet — pick a trade and package above, then tap Add as you walk the house.</div>'}
+        `).join('') : '<div class="wt-empty">No items added yet — search a package above, then tap Add as you walk the house.</div>'}
 
         ${walkthroughItems.length ? `
         <div class="wt-total-row">
@@ -550,6 +560,18 @@ function renderResults(){
 
         <div class="wt-source-note">Prices are real contractor cost from 7 Pillars' audited JOBSpan catalog (16 trades, 89 packages) — not customer-facing quotes. Trades without real data yet (roofing, siding, tiling, etc.) aren't in this list rather than showing a fake number.</div>
       </div>
+    </div>
+
+    <div class="section">
+      ${usingWalkthrough ? `
+        <div class="formula-muted">Formula estimate (not used): ${money(data.rehab.total)} — replaced by your walkthrough total above.</div>
+      ` : `
+        <div class="section-head">Formula Rehab Estimate (age/size guess — search a package below for a real number)</div>
+        <div class="rehab-breakdown">
+          <div class="rline"><span>Base estimate (age/size)</span><b>${money(data.rehab.base)}</b></div>
+          <div class="rline"><span>Unknowns buffer (25%)</span><b>${money(data.rehab.unknownsBuffer)}</b></div>
+        </div>
+      `}
     </div>
 
     <div class="section">
@@ -572,8 +594,6 @@ function renderResults(){
       </div>
     </div>` : ''}
   `;
-
-  populateWalkthroughDropdowns();
 }
 </script>
 </body>
