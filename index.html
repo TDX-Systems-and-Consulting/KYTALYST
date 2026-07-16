@@ -440,7 +440,7 @@ async function runScan(){
       emptyState.style.display = "block";
       emptyState.innerHTML = `
         <div class="glyph">⌂</div>
-        <p><strong>No active listing found</strong> for this address.<br>KYTALYST only scans properties currently for sale — this one just isn't listed right now.</p>
+        <p><strong>No current listing found in our data</strong> for this address.<br>This doesn't mean the property isn't for sale — it means our data source (RentCast) doesn't have an active record for it. If you know this house is listed, try the exact address as it appears on the sign or MLS.</p>
       `;
       btn.disabled = false;
       return;
