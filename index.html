@@ -242,6 +242,7 @@
 
   <div id="mockNotice" class="mock-note" style="display:none;">
     Running on mock data — the backend endpoint isn't reachable. Numbers below are realistic placeholders so the UI/flow can be reviewed now.
+    <br><span id="mockErrorDetail" style="font-weight:600;"></span>
   </div>
 
   <div id="resultsWrap"></div>
@@ -470,6 +471,8 @@ async function runScan(){
     }
     console.warn("Live backend failed, falling back to mock:", err.message);
     usingMock = true;
+    const detailEl = document.getElementById('mockErrorDetail');
+    if (detailEl) detailEl.textContent = `Actual error: [${err.status || 'no status'}] ${err.message}`;
     try{
       data = await fetchMockScan(address);
     }catch(mockErr){
