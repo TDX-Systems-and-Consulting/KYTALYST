@@ -410,7 +410,9 @@ async function fetchRealScan(address){
   });
   if(!res.ok){
     const errBody = await res.json().catch(() => ({}));
-    throw new Error(errBody.error || ("Backend returned " + res.status));
+    const err = new Error(errBody.error || ("Backend returned " + res.status));
+    err.status = res.status;
+    throw err;
   }
   return await res.json();
 }
@@ -431,6 +433,18 @@ async function runScan(){
   try{
     data = await fetchRealScan(address);
   }catch(err){
+    if (err.status === 404) {
+      // Genuinely normal outcome — this address just isn't for sale right now. Not a failure.
+      statusLine.textContent = "";
+      const emptyState = document.getElementById('emptyState');
+      emptyState.style.display = "block";
+      emptyState.innerHTML = `
+        <div class="glyph">⌂</div>
+        <p><strong>No active listing found</strong> for this address.<br>KYTALYST only scans properties currently for sale — this one just isn't listed right now.</p>
+      `;
+      btn.disabled = false;
+      return;
+    }
     console.warn("Live backend failed, falling back to mock:", err.message);
     usingMock = true;
     try{
