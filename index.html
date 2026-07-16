@@ -15,6 +15,7 @@
     --green:#4f8f5b;
     --red:#b1483f;
     --muted:#8592a0;
+    --widget-scheme: dark;
     --mono: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace;
     --serif: Georgia, 'Times New Roman', serif;
     --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -29,6 +30,7 @@
     --green:#2f6b3f;
     --red:#a8382f;
     --muted:#6b6b60;
+    --widget-scheme: light;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{margin:0;padding:0;background:var(--ink);color:var(--paper);font-family:var(--sans);}
@@ -131,16 +133,16 @@
   }
 
   /* Places Autocomplete container — wraps Google's element to match the existing input look */
+  /* Places Autocomplete — Google added real CSS support for these directly on the element */
   .address-autocomplete-wrap{
-    flex:1; background:var(--card); border:1px solid var(--line); border-radius:2px;
-    display:flex; align-items:stretch; position:relative; z-index:10;
+    flex:1; position:relative; z-index:10;
   }
   .address-autocomplete-wrap gmp-place-autocomplete{
     width:100%;
-    --gmp-mat-color-surface: transparent;
-    --gmp-mat-color-on-surface: var(--paper);
-    --gmp-mat-color-on-surface-variant: var(--muted);
-    --gmp-mat-color-outline: transparent;
+    color-scheme: var(--widget-scheme);
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 2px;
   }
 </style>
 <script>
@@ -207,7 +209,7 @@ const CLOUD_FUNCTION_URL = "https://kytalystscan-1061786207687.us-central1.run.a
       includedRegionCodes: ["us"],
       includedPrimaryTypes: ["street_address", "premise", "subpremise"]
     });
-    autocompleteEl.placeholder = "e.g. 684 Dundee Ct, Wentzville, MO";
+    autocompleteEl.placeholder = "Start typing a property address...";
     document.getElementById('autocompleteMount').appendChild(autocompleteEl);
 
     const hiddenInput = document.getElementById('addressInput');
