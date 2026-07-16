@@ -137,6 +137,42 @@
   }
   .agent-btn:active{ background:var(--copper); color:#fff; }
 
+  .walkthrough-box{
+    background:var(--card); border:1px solid var(--line); border-radius:3px; padding:16px;
+  }
+  .wt-row{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;}
+  .wt-row select, .wt-row input{
+    background:var(--ink); color:var(--paper); border:1px solid var(--line);
+    font-family:var(--sans); font-size:14px; padding:10px; border-radius:2px; outline:none; width:100%;
+  }
+  .wt-qty-add{display:flex; gap:8px;}
+  .wt-qty-add input{width:70px; flex:none;}
+  .wt-add-btn{
+    flex:1; background:var(--green); color:#fff; border:none; font-family:var(--mono);
+    font-size:12px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;
+    border-radius:2px; cursor:pointer;
+  }
+  .wt-item-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:9px 0; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12.5px;
+  }
+  .wt-item-row:last-of-type{border-bottom:none;}
+  .wt-item-desc{color:var(--paper);}
+  .wt-item-sub{color:var(--muted); font-size:11px; margin-top:1px;}
+  .wt-item-right{display:flex; align-items:center; gap:10px;}
+  .wt-item-cost{color:var(--paper); font-weight:600;}
+  .wt-remove{
+    background:transparent; border:1px solid var(--red); color:#e08b83; border-radius:20px;
+    font-family:var(--mono); font-size:10px; padding:3px 8px; cursor:pointer;
+  }
+  .wt-total-row{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:12px; padding-top:12px; border-top:1px solid var(--line);
+    font-family:var(--mono); font-weight:700; color:var(--paper);
+  }
+  .wt-empty{font-family:var(--mono); font-size:11.5px; color:var(--muted); padding:8px 0;}
+  .wt-source-note{font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:10px; line-height:1.5;}
+
   .empty-state{padding:60px 20px; text-align:center;}
   .empty-state .glyph{font-size:32px; opacity:0.3; margin-bottom:14px;}
   .empty-state p{font-family:var(--mono); font-size:12px; color:var(--muted); max-width:280px; margin:0 auto; line-height:1.7;}
@@ -213,6 +249,62 @@ applyTheme(localStorage.getItem('kytalyst-theme') || 'dark');
 
 // Live KYTALYST backend — deployed 7/15/26
 const CLOUD_FUNCTION_URL = "https://kytalystscan-1061786207687.us-central1.run.app";
+
+// --- Real JOBSpan (7 Pillars Contracting) catalog pricing — exported 7/14/26, 89 tier records, 16 trades ---
+// t=trade, p=package, d=description, tier=low/med/high, tl=tierLabel, c=totalCost (contractor cost, not customer price)
+const CATALOG = [{"t":"1100 Plumbing","p":"Faucet Replacement","d":"Bath or kitchen faucet swap with supply lines and shutoffs","tier":"low","tl":"Standard","c":274.82},{"t":"1100 Plumbing","p":"Faucet Replacement","d":"Bath or kitchen faucet swap with supply lines and shutoffs","tier":"med","tl":"Mid-Grade","c":353.84},{"t":"1100 Plumbing","p":"Faucet Replacement","d":"Bath or kitchen faucet swap with supply lines and shutoffs","tier":"high","tl":"Premium","c":381.83},{"t":"1100 Plumbing","p":"Toilet Replacement","d":"Full toilet swap with wax ring, supply line, and seat","tier":"low","tl":"Round Standard","c":224.95},{"t":"1100 Plumbing","p":"Toilet Replacement","d":"Full toilet swap with wax ring, supply line, and seat","tier":"med","tl":"Oblong Dual Flush","c":234.95},{"t":"1100 Plumbing","p":"Toilet Replacement","d":"Full toilet swap with wax ring, supply line, and seat","tier":"high","tl":"Oblong Power Flush","c":319.03},{"t":"1100 Plumbing","p":"Kitchen Sink Install","d":"Drop-in sink with strainer, P-trap, and labor","tier":"low","tl":"Single Bowl 25\"","c":384.45},{"t":"1100 Plumbing","p":"Kitchen Sink Install","d":"Drop-in sink with strainer, P-trap, and labor","tier":"med","tl":"Double Bowl 33\"","c":405.22},{"t":"1100 Plumbing","p":"Kitchen Sink Install","d":"Drop-in sink with strainer, P-trap, and labor","tier":"high","tl":"Pedestal Sink","c":389.2},{"t":"1100 Plumbing","p":"Shower/Tub Valve","d":"Tub or shower valve replacement with trim kit","tier":"low","tl":"Glacier Bay Aragon Chrome","c":249},{"t":"1100 Plumbing","p":"Shower/Tub Valve","d":"Tub or shower valve replacement with trim kit","tier":"med","tl":"Moen Adler Chrome","c":249},{"t":"1100 Plumbing","p":"Shower/Tub Valve","d":"Tub or shower valve replacement with trim kit","tier":"high","tl":"Banbury Trim Kit Matte Black","c":315.62},{"t":"1100 Plumbing","p":"Water Heater Replace","d":"Water heater swap with expansion tank","tier":"low","tl":"40 gal Electric","c":748.88},{"t":"1100 Plumbing","p":"Water Heater Replace","d":"Water heater swap with expansion tank","tier":"med","tl":"40 gal Natural Gas","c":1028.88},{"t":"1100 Plumbing","p":"Water Heater Replace","d":"Water heater swap with expansion tank","tier":"high","tl":"50 gal Natural Gas","c":1128.88},{"t":"1100 Plumbing","p":"Supply Line Rough-In (PEX)","d":"Per 10ft length \u2014 color-coded hot/cold PEX-B","tier":"low","tl":"Blue PEX (cold)","c":50.36},{"t":"1100 Plumbing","p":"Supply Line Rough-In (PEX)","d":"Per 10ft length \u2014 color-coded hot/cold PEX-B","tier":"high","tl":"Red PEX (hot)","c":50.36},{"t":"1100 Plumbing","p":"Shutoff Valve Install","d":"Per valve \u2014 SharkBite push-to-connect angle stop","tier":"low","tl":"SharkBite Quarter-Turn Angle Stop","c":63.45},{"t":"1000 Electrical","p":"Ceiling Fan Install","d":"Fan install at existing junction box","tier":"low","tl":"42\" Littleton White","c":144.97},{"t":"1000 Electrical","p":"Ceiling Fan Install","d":"Fan install at existing junction box","tier":"med","tl":"44\" Hampton Bay Bronze","c":174.97},{"t":"1000 Electrical","p":"Ceiling Fan Install","d":"Fan install at existing junction box","tier":"high","tl":"52\" Hampton Bay Menage","c":209},{"t":"1000 Electrical","p":"Flush Mount Light","d":"Swap flush mount light at existing box","tier":"low","tl":"11\" Brushed Nickel","c":72.47},{"t":"1000 Electrical","p":"Flush Mount Light","d":"Swap flush mount light at existing box","tier":"med","tl":"15\" Mid-Grade","c":89.99},{"t":"1000 Electrical","p":"Flush Mount Light","d":"Swap flush mount light at existing box","tier":"high","tl":"Sconce/Premium","c":75.97},{"t":"1000 Electrical","p":"Vanity Light Replace","d":"Bathroom vanity bar light swap","tier":"low","tl":"3-Light Raceway BN","c":64.97},{"t":"1000 Electrical","p":"Vanity Light Replace","d":"Bathroom vanity bar light swap","tier":"med","tl":"3-Light Oil Rubbed Bronze","c":129.97},{"t":"1000 Electrical","p":"Vanity Light Replace","d":"Bathroom vanity bar light swap","tier":"high","tl":"3-Light Regan BN","c":139.97},{"t":"1000 Electrical","p":"GFCI Outlet Install","d":"GFCI outlet install at existing box with wall plate","tier":"low","tl":"1 Outlet","c":44.46},{"t":"1000 Electrical","p":"GFCI Outlet Install","d":"GFCI outlet install at existing box with wall plate","tier":"med","tl":"2 Outlets","c":88.92},{"t":"1000 Electrical","p":"GFCI Outlet Install","d":"GFCI outlet install at existing box with wall plate","tier":"high","tl":"4 Outlets","c":177.84},{"t":"1000 Electrical","p":"Light Switch Install","d":"Toggle switch replacement with wall plate","tier":"low","tl":"1 Switch","c":31.43},{"t":"1000 Electrical","p":"Light Switch Install","d":"Toggle switch replacement with wall plate","tier":"med","tl":"3 Switches","c":94.29},{"t":"1000 Electrical","p":"Light Switch Install","d":"Toggle switch replacement with wall plate","tier":"high","tl":"6 Switches","c":188.58},{"t":"1000 Electrical","p":"Rough Wiring / Wire Pull","d":"Per linear ft \u2014 Romex wire pull, rough-in stage","tier":"low","tl":"14/2 Romex (15-amp circuits)","c":4.5},{"t":"1000 Electrical","p":"Rough Wiring / Wire Pull","d":"Per linear ft \u2014 Romex wire pull, rough-in stage","tier":"high","tl":"12/2 Romex (20-amp circuits)","c":4.5},{"t":"1000 Electrical","p":"Old Work Electrical Box Install","d":"Per box \u2014 retrofit outlet/switch box, rough-in stage","tier":"low","tl":"1-Gang PVC Old Work Box","c":52.18},{"t":"1700 Flooring","p":"LVP Flooring Install","d":"Luxury vinyl plank install per room, includes transition strip","tier":"low","tl":"LVP Aspen 4.5mm/12mil","c":1476.0},{"t":"1700 Flooring","p":"LVP Flooring Install","d":"Luxury vinyl plank install per room, includes transition strip","tier":"med","tl":"LVP Ash Gray 5mm/20mil","c":1516.0},{"t":"1700 Flooring","p":"LVP Flooring Install","d":"Luxury vinyl plank install per room, includes transition strip","tier":"high","tl":"LVP Ash Gray 6.5mm/24mil","c":1674.0},{"t":"1700 Flooring","p":"Carpet Remove & Replace","d":"Pull existing carpet, install new","tier":"low","tl":"Carpet Removal Only","c":400},{"t":"1700 Flooring","p":"Carpet Remove & Replace","d":"Pull existing carpet, install new","tier":"med","tl":"Remove + Replace","c":908.0},{"t":"1700 Flooring","p":"Carpet Remove & Replace","d":"Pull existing carpet, install new","tier":"high","tl":"Devon Oak LVP Alternative","c":1398.0},{"t":"2300 Painting","p":"Paint Exterior Door","d":"Interior and exterior of doors, includes prep","tier":"low","tl":"1 Door","c":15.3},{"t":"2300 Painting","p":"Paint Exterior Door","d":"Interior and exterior of doors, includes prep","tier":"med","tl":"2 Doors","c":30.6},{"t":"2300 Painting","p":"Paint Exterior Door","d":"Interior and exterior of doors, includes prep","tier":"high","tl":"4 Doors","c":61.2},{"t":"1900 Cabinetry","p":"Bathroom Vanity Install","d":"Vanity with top, mirror, and install labor","tier":"low","tl":"24.5\" Glacier Bay Freestanding","c":398.97},{"t":"1900 Cabinetry","p":"Bathroom Vanity Install","d":"Vanity with top, mirror, and install labor","tier":"med","tl":"31\" Vanity with Cultured Marble Top","c":448.97},{"t":"1900 Cabinetry","p":"Bathroom Vanity Install","d":"Vanity with top, mirror, and install labor","tier":"high","tl":"30\" Bannister Freestanding","c":588.97},{"t":"2000 Countertops","p":"Countertop Install","d":"Kitchen or bath countertop supply and install","tier":"low","tl":"Wilsonart 6ft Laminate","c":416.98},{"t":"2000 Countertops","p":"Countertop Install","d":"Kitchen or bath countertop supply and install","tier":"med","tl":"Hampton Bay 4ft Gray Laminate Kit","c":361.85},{"t":"2000 Countertops","p":"Countertop Install","d":"Kitchen or bath countertop supply and install","tier":"high","tl":"Stone per sqft","c":1775},{"t":"1400 Drywall","p":"Drywall Patch","d":"Hole or section repair, tape, mud, sand, prime","tier":"low","tl":"Small Patch (per sqft)","c":81.3},{"t":"1400 Drywall","p":"Drywall Patch","d":"Hole or section repair, tape, mud, sand, prime","tier":"med","tl":"1/2 Sheet","c":260.74},{"t":"1400 Drywall","p":"Drywall Patch","d":"Hole or section repair, tape, mud, sand, prime","tier":"high","tl":"Full Sheet 4x8","c":453.72},{"t":"2400 Appliances","p":"Range / Stove Install","d":"Freestanding range install, disconnect old unit","tier":"low","tl":"Electric Standard","c":869.96},{"t":"2400 Appliances","p":"Range / Stove Install","d":"Freestanding range install, disconnect old unit","tier":"med","tl":"Over Range Microwave","c":399},{"t":"2400 Appliances","p":"Range / Stove Install","d":"Freestanding range install, disconnect old unit","tier":"high","tl":"Dishwasher","c":800},{"t":"1500 Doors & Windows","p":"Interior Door Replace","d":"Interior door install, remove old, install new with hardware","tier":"low","tl":"30\" Hollow Core Slab","c":184.31},{"t":"1500 Doors & Windows","p":"Interior Door Replace","d":"Interior door install, remove old, install new with hardware","tier":"med","tl":"30\" Steves 6-Panel Primed","c":210.45},{"t":"1500 Doors & Windows","p":"Interior Door Replace","d":"Interior door install, remove old, install new with hardware","tier":"high","tl":"32\" Right-Hand Pre-Hung","c":326.45},{"t":"1500 Doors & Windows","p":"Deadbolt Install","d":"Deadbolt replacement on exterior door","tier":"low","tl":"1 Door","c":50.45},{"t":"1500 Doors & Windows","p":"Deadbolt Install","d":"Deadbolt replacement on exterior door","tier":"med","tl":"2 Doors","c":100.9},{"t":"1500 Doors & Windows","p":"Deadbolt Install","d":"Deadbolt replacement on exterior door","tier":"high","tl":"3 Doors","c":151.35},{"t":"1500 Doors & Windows","p":"Mini Blind Install","d":"Window blind install per window","tier":"low","tl":"1 Window","c":76.48},{"t":"1500 Doors & Windows","p":"Mini Blind Install","d":"Window blind install per window","tier":"med","tl":"3 Windows","c":229.44},{"t":"1500 Doors & Windows","p":"Mini Blind Install","d":"Window blind install per window","tier":"high","tl":"6 Windows","c":458.88},{"t":"0200 Demolition","p":"Demo / Trash Out","d":"Demo labor and debris removal","tier":"low","tl":"Half Day 1-Man","c":400},{"t":"0200 Demolition","p":"Demo / Trash Out","d":"Demo labor and debris removal","tier":"med","tl":"Full Day 1-Man","c":800},{"t":"0200 Demolition","p":"Demo / Trash Out","d":"Demo labor and debris removal","tier":"high","tl":"Full Day + Dumpster","c":800},{"t":"2800 Concrete","p":"Concrete Replacement","d":"Per sqft \u2014 all-in rate, driveway/patio/sidewalk","tier":"low","tl":"Standard Replacement","c":12},{"t":"2800 Concrete","p":"Concrete Patch Repair","d":"Spot repair \u2014 spalling, cracks, minor damage","tier":"low","tl":"Sika Textured Concrete Patch","c":232.62},{"t":"2500 Decking","p":"Deck Board Replace","d":"Replace deck boards per board (16 ft. length)","tier":"low","tl":"Pressure-Treated Pine","c":62.48},{"t":"2500 Decking","p":"Deck Board Replace","d":"Replace deck boards per board (16 ft. length)","tier":"high","tl":"Composite (NewTechWood)","c":141.26},{"t":"2500 Decking","p":"Composite Railing Install","d":"Composite railing kit, per 6 ft. section","tier":"low","tl":"6 ft. Railing Kit","c":444},{"t":"0600 Framing","p":"Wall Stud Framing","d":"Per stud \u2014 2x4 wall framing","tier":"low","tl":"2x4 Stud","c":83.46},{"t":"0600 Framing","p":"OSB Subfloor/Sheathing Install","d":"Per 4x8 sheet \u2014 subfloor or wall sheathing","tier":"low","tl":"1/2 in. OSB Sheet","c":50.58},{"t":"0600 Framing","p":"Joist Hanger Install","d":"Per hanger \u2014 2x8 nominal lumber","tier":"low","tl":"Simpson Strong-Tie LUS (2x8)","c":17.39},{"t":"1300 Insulation","p":"Blown-In Attic Insulation","d":"Per sqft \u2014 cellulose blown-in, all-in rate","tier":"low","tl":"Cellulose Blown-In","c":1.9},{"t":"1300 Insulation","p":"Batt Insulation (R-15)","d":"Per sqft \u2014 wall/ceiling batt insulation","tier":"low","tl":"Standard Unfaced Batt","c":0.5},{"t":"1300 Insulation","p":"Batt Insulation (R-15)","d":"Per sqft \u2014 wall/ceiling batt insulation","tier":"high","tl":"Fire & Sound Guard Batt","c":0.57},{"t":"1300 Insulation","p":"Attic Insulation Roll (R-30)","d":"Per sqft \u2014 unfaced fiberglass roll, attic-grade","tier":"low","tl":"Owens Corning R-30 Pink","c":1.85},{"t":"1200 Mechanical","p":"Programmable Thermostat Install","d":"Thermostat swap with install labor","tier":"low","tl":"1-Week Programmable","c":79.98},{"t":"1200 Mechanical","p":"Wall/Ceiling Supply Register Install","d":"Per register \u2014 2-way wall or ceiling supply","tier":"low","tl":"12in x 6in 2-Way Register","c":39.87},{"t":"1200 Mechanical","p":"Return Air Grille Install","d":"Per grille \u2014 wall-mounted return air","tier":"low","tl":"30in x 10in White Return Grille","c":45},{"t":"1200 Mechanical","p":"Floor Register/Diffuser Install","d":"Per register \u2014 floor-mounted supply","tier":"low","tl":"4in x 10in White Floor Diffuser","c":22.97},{"t":"1200 Mechanical","p":"Floor Register/Diffuser Install","d":"Per register \u2014 floor-mounted supply","tier":"high","tl":"4in x 10in Brown Steel Register","c":22.97},{"t":"1200 Mechanical","p":"AC Security Cage Install","d":"Cage + real install service, per unit","tier":"low","tl":"Reinforced Steel AC Cage","c":730.99},{"t":"1200 Mechanical","p":"Full HVAC System Replacement","d":"AC & furnace, complete install \u2014 real all-in flat rate","tier":"low","tl":"Install New AC & Furnace","c":5775},{"t":"1200 Mechanical","p":"HVAC Clean & Check (Service)","d":"Maintenance service call \u2014 real all-in flat rate","tier":"low","tl":"JC's AC Clean & Check","c":125}];
+
+let lastScanData = null;
+let walkthroughItems = [];
+
+function catalogTrades(){
+  return [...new Set(CATALOG.map(r => r.t))].sort();
+}
+function catalogPackages(trade){
+  return [...new Set(CATALOG.filter(r => r.t === trade).map(r => r.p))].sort();
+}
+function catalogTiers(trade, pkg){
+  return CATALOG.filter(r => r.t === trade && r.p === pkg);
+}
+function walkthroughTotal(){
+  return walkthroughItems.reduce((sum, it) => sum + it.unitCost * it.qty, 0);
+}
+
+function populateWalkthroughDropdowns(){
+  const tradeSel = document.getElementById('wtTrade');
+  if (!tradeSel) return;
+  tradeSel.innerHTML = catalogTrades().map(t => `<option value="${t}">${t}</option>`).join('');
+  onTradeChange();
+}
+function onTradeChange(){
+  const trade = document.getElementById('wtTrade').value;
+  const pkgSel = document.getElementById('wtPackage');
+  pkgSel.innerHTML = catalogPackages(trade).map(p => `<option value="${p}">${p}</option>`).join('');
+  onPackageChange();
+}
+function onPackageChange(){
+  const trade = document.getElementById('wtTrade').value;
+  const pkg = document.getElementById('wtPackage').value;
+  const tierSel = document.getElementById('wtTier');
+  const tiers = catalogTiers(trade, pkg);
+  tierSel.innerHTML = tiers.map(r => `<option value="${r.tier}">${r.tl} — ${money(r.c)}</option>`).join('');
+}
+function addWalkthroughItem(){
+  const trade = document.getElementById('wtTrade').value;
+  const pkg = document.getElementById('wtPackage').value;
+  const tier = document.getElementById('wtTier').value;
+  const qty = Math.max(1, parseInt(document.getElementById('wtQty').value, 10) || 1);
+  const record = catalogTiers(trade, pkg).find(r => r.tier === tier);
+  if (!record) return;
+  walkthroughItems.push({
+    trade, pkg, tierLabel: record.tl, unitCost: record.c, qty
+  });
+  renderResults();
+}
+function removeWalkthroughItem(idx){
+  walkthroughItems.splice(idx, 1);
+  renderResults();
+}
 
 // --- Google Places Autocomplete (frontend-only; does not touch kytalystScan or RentCast calls) ---
 (async function initAutocomplete(){
@@ -351,11 +443,22 @@ async function runScan(){
   }
 
   document.getElementById('mockNotice').style.display = usingMock ? "block" : "none";
-  statusLine.textContent = usingMock ? "" : "";
+  statusLine.textContent = "";
   btn.disabled = false;
 
+  lastScanData = data;
+  walkthroughItems = [];
+  renderResults();
+}
+
+function renderResults(){
+  const data = lastScanData;
+  if (!data) return;
+
   const wantedProfit = 20000;
-  const deal = evaluateDeal({ listPrice: data.listPrice, arv: data.arv, rehabTotal: data.rehab.total, wantedProfit });
+  const usingWalkthrough = walkthroughItems.length > 0;
+  const rehabTotalUsed = usingWalkthrough ? walkthroughTotal() : data.rehab.total;
+  const deal = evaluateDeal({ listPrice: data.listPrice, arv: data.arv, rehabTotal: rehabTotalUsed, wantedProfit });
 
   const wrap = document.getElementById('resultsWrap');
   wrap.innerHTML = `
@@ -376,7 +479,7 @@ async function runScan(){
     <div class="metrics-grid">
       <div class="metric-cell"><span class="lbl">List Price</span><span class="val">${money(data.listPrice)}</span></div>
       <div class="metric-cell"><span class="lbl">ARV</span><span class="val">${money(data.arv)}</span></div>
-      <div class="metric-cell"><span class="lbl">Rehab Estimate</span><span class="val">${money(data.rehab.total)}</span></div>
+      <div class="metric-cell"><span class="lbl">${usingWalkthrough ? 'Rehab (Walkthrough)' : 'Rehab (Formula Est.)'}</span><span class="val">${money(rehabTotalUsed)}</span></div>
       <div class="metric-cell"><span class="lbl">Max Offer (MAO)</span><span class="val">${money(deal.mao)}</span></div>
       <div class="metric-cell"><span class="lbl">Sqft</span><span class="val">${(data.sqft || 0).toLocaleString()}</span></div>
       <div class="metric-cell"><span class="lbl">Year Built</span><span class="val">${data.yearBuilt || "—"}</span></div>
@@ -390,10 +493,48 @@ async function runScan(){
     </div>
 
     <div class="section">
-      <div class="section-head">Rehab Breakdown</div>
+      <div class="section-head">Formula Rehab Estimate (age/size guess — replace with walkthrough below)</div>
       <div class="rehab-breakdown">
         <div class="rline"><span>Base estimate (age/size)</span><b>${money(data.rehab.base)}</b></div>
         <div class="rline"><span>Unknowns buffer (25%)</span><b>${money(data.rehab.unknownsBuffer)}</b></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">Live Walkthrough — Real JOBSpan Pricing</div>
+      <div class="walkthrough-box">
+        <div class="wt-row">
+          <select id="wtTrade" onchange="onTradeChange()"></select>
+          <select id="wtPackage" onchange="onPackageChange()"></select>
+        </div>
+        <div class="wt-row">
+          <select id="wtTier"></select>
+          <div class="wt-qty-add">
+            <input type="number" id="wtQty" value="1" min="1">
+            <button class="wt-add-btn" onclick="addWalkthroughItem()">Add</button>
+          </div>
+        </div>
+
+        ${walkthroughItems.length ? walkthroughItems.map((it, i) => `
+          <div class="wt-item-row">
+            <div>
+              <div class="wt-item-desc">${it.pkg} — ${it.tierLabel}</div>
+              <div class="wt-item-sub">${it.trade} · Qty ${it.qty}</div>
+            </div>
+            <div class="wt-item-right">
+              <span class="wt-item-cost">${money(it.unitCost * it.qty)}</span>
+              <button class="wt-remove" onclick="removeWalkthroughItem(${i})">Remove</button>
+            </div>
+          </div>
+        `).join('') : '<div class="wt-empty">No items added yet — pick a trade and package above, then tap Add as you walk the house.</div>'}
+
+        ${walkthroughItems.length ? `
+        <div class="wt-total-row">
+          <span>Walkthrough Total</span>
+          <span>${money(walkthroughTotal())}</span>
+        </div>` : ''}
+
+        <div class="wt-source-note">Prices are real contractor cost from 7 Pillars' audited JOBSpan catalog (16 trades, 89 packages) — not customer-facing quotes. Trades without real data yet (roofing, siding, tiling, etc.) aren't in this list rather than showing a fake number.</div>
       </div>
     </div>
 
@@ -417,6 +558,8 @@ async function runScan(){
       </div>
     </div>` : ''}
   `;
+
+  populateWalkthroughDropdowns();
 }
 </script>
 </body>
