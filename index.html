@@ -344,6 +344,15 @@ function removeWalkthroughItem(idx){
 
     const hiddenInput = document.getElementById('addressInput');
 
+    // Coming from daily.html's "Open Full Walkthrough" link? Prefill and auto-run the scan.
+    const urlParams = new URLSearchParams(window.location.search);
+    const prefillAddress = urlParams.get('address');
+    if (prefillAddress) {
+      hiddenInput.value = prefillAddress;
+      try { autocompleteEl.value = prefillAddress; } catch(_) {}
+      setTimeout(() => runScan(), 300); // small delay so the Maps script has time to fully settle
+    }
+
     // Fallback: if the user types a full address but never picks a dropdown suggestion,
     // keep the hidden field in sync with their raw typed text so Scan still works.
     autocompleteEl.addEventListener('input', () => {
