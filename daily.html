@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KYTALYST — Today's Top Deals</title>
+<style>
+  :root{
+    --ink:#12181f; --paper:#eef0ea; --card:#1b232c; --line:#2c3641;
+    --copper:#b5652f; --copper-bright:#d97f42; --green:#4f8f5b; --red:#b1483f; --muted:#8592a0;
+    --mono: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace;
+    --serif: Georgia, 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  :root[data-theme="light"]{
+    --ink:#f2efe6; --paper:#1c2420; --card:#ffffff; --line:#d8d3c4;
+    --copper:#a8481f; --copper-bright:#c25a2a; --green:#2f6b3f; --red:#a8382f; --muted:#6b6b60;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--ink);color:var(--paper);font-family:var(--sans);}
+  body{min-height:100vh; padding-bottom:60px;}
+
+  .topbar{padding:22px 20px 18px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; justify-content:space-between;}
+  .wordmark{font-family:var(--serif); font-size:22px; font-weight:700;}
+  .wordmark span{color:var(--copper-bright);}
+  .tagline{font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px;}
+  .theme-toggle{background:transparent; border:1px solid var(--line); color:var(--muted); font-family:var(--mono); font-size:11px; text-transform:uppercase; padding:6px 12px; border-radius:20px; cursor:pointer;}
+
+  .summary-bar{
+    margin:20px 20px 0; padding:14px 16px; background:var(--card); border:1px solid var(--line);
+    border-radius:3px; display:flex; justify-content:space-between; font-family:var(--mono); font-size:12px; color:var(--muted);
+  }
+  .summary-bar b{color:var(--paper); font-size:14px;}
+
+  .deal-card{
+    margin:16px 20px 0; background:var(--card); border:1px solid var(--line); border-radius:3px; overflow:hidden;
+  }
+  .deal-header{padding:14px 16px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;}
+  .deal-address{font-family:var(--serif); font-size:16px; font-weight:700;}
+  .deal-profit{font-family:var(--mono); font-size:18px; font-weight:700; color:var(--green);}
+  .deal-profit-lbl{font-family:var(--mono); font-size:9px; color:var(--muted); text-transform:uppercase; text-align:right;}
+  .deal-metrics{display:grid; grid-template-columns:1fr 1fr 1fr; gap:1px; background:var(--line);}
+  .deal-metric{background:var(--card); padding:10px 12px;}
+  .deal-metric .lbl{font-family:var(--mono); font-size:9px; color:var(--muted); text-transform:uppercase; display:block; margin-bottom:3px;}
+  .deal-metric .val{font-family:var(--mono); font-size:13px; font-weight:600;}
+  .deal-chips{padding:10px 16px; display:flex; flex-wrap:wrap; gap:6px;}
+  .chip{font-family:var(--mono); font-size:10.5px; background:rgba(213,127,66,0.15); color:var(--copper-bright); padding:4px 9px; border-radius:20px; border:1px solid rgba(213,127,66,0.3);}
+  .deal-cta{display:block; text-align:center; padding:10px; font-family:var(--mono); font-size:11px; text-transform:uppercase; color:var(--copper-bright); border-top:1px solid var(--line); text-decoration:none;}
+  .deal-cta:active{background:rgba(213,127,66,0.1);}
+
+  .empty-state{padding:60px 20px; text-align:center;}
+  .empty-state p{font-family:var(--mono); font-size:12px; color:var(--muted); max-width:280px; margin:14px auto 0; line-height:1.7;}
+  .status-line{font-family:var(--mono); font-size:12px; color:var(--muted); padding:16px 20px; text-align:center;}
+</style>
+<script>
+  (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({});
+</script>
+</head>
+<body>
+
+  <div class="topbar">
+    <div>
+      <div class="wordmark">KYTA<span>LYST</span></div>
+      <div class="tagline">Today's Top Deals</div>
+    </div>
+    <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀ Light</button>
+  </div>
+
+  <div id="statusLine" class="status-line">Loading today's results...</div>
+  <div id="resultsWrap"></div>
+
+<script>
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('kytalyst-theme', theme);
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = theme === 'light' ? '🌙 Dark' : '☀ Light';
+}
+function toggleTheme(){
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  applyTheme(current === 'light' ? 'dark' : 'light');
+}
+applyTheme(localStorage.getItem('kytalyst-theme') || 'dark');
+
+// TODO tomorrow: replace with the real deployed kytalystGetDaily URL once created on the MacBook
+const GET_DAILY_URL = "REPLACE_WITH_DEPLOYED_GET_DAILY_URL";
+
+function money(n){
+  const sign = n < 0 ? "-" : "";
+  return sign + "$" + Math.abs(Math.round(n)).toLocaleString();
+}
+
+async function loadToday(){
+  const statusLine = document.getElementById('statusLine');
+  const wrap = document.getElementById('resultsWrap');
+  try{
+    const res = await fetch(GET_DAILY_URL);
+    if (!res.ok){
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `Backend returned ${res.status}`);
+    }
+    const data = await res.json();
+    statusLine.textContent = "";
+
+    const summaryBar = `
+      <div class="summary-bar">
+        <span>${data.totalNewListings} new listings found</span>
+        <span><b>${data.dealsFound}</b> cleared your profit bar</span>
+      </div>
+    `;
+
+    if (!data.results || !data.results.length){
+      wrap.innerHTML = summaryBar + `
+        <div class="empty-state">
+          <p>No deals cleared the profit bar today. That's honest — not every market day produces one. Check back tomorrow morning.</p>
+        </div>
+      `;
+      return;
+    }
+
+    wrap.innerHTML = summaryBar + data.results.map(r => `
+      <div class="deal-card">
+        <div class="deal-header">
+          <div class="deal-address">${r.address}</div>
+          <div>
+            <div class="deal-profit">${money(r.projectedProfit)}</div>
+            <div class="deal-profit-lbl">Projected Profit</div>
+          </div>
+        </div>
+        <div class="deal-metrics">
+          <div class="deal-metric"><span class="lbl">List Price</span><span class="val">${money(r.listPrice)}</span></div>
+          <div class="deal-metric"><span class="lbl">ARV</span><span class="val">${money(r.arv)}</span></div>
+          <div class="deal-metric"><span class="lbl">Max Offer</span><span class="val">${money(r.mao)}</span></div>
+        </div>
+        ${(r.distressSignals && r.distressSignals.length) ? `
+        <div class="deal-chips">
+          ${r.distressSignals.map(s => `<span class="chip">${s}</span>`).join('')}
+        </div>` : ''}
+        <a class="deal-cta" href="index.html?address=${encodeURIComponent(r.address)}">Open Full Walkthrough →</a>
+      </div>
+    `).join('');
+  }catch(err){
+    statusLine.textContent = "";
+    wrap.innerHTML = `<div class="empty-state"><p><strong>Couldn't load today's results.</strong><br>${err.message}</p></div>`;
+  }
+}
+
+loadToday();
+</script>
+</body>
+</html>
