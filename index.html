@@ -238,6 +238,9 @@
       <button class="scan-btn" id="scanBtn" onclick="runScan()">Scan</button>
     </div>
     <div class="status-line" id="statusLine"></div>
+    <button id="fsboManualBtn" onclick="showFSBOForm()" style="display:none; margin-top:10px; width:100%; padding:9px 14px; background:transparent; border:1px dashed var(--copper); border-radius:7px; color:var(--copper-bright); font-family:var(--mono); font-size:12px; letter-spacing:0.5px; cursor:pointer; text-align:left;">
+      ✎ &nbsp;Enter price manually — FSBO / off-market
+    </button>
   </div>
 
   <div id="mockNotice" class="mock-note" style="display:none;">
@@ -275,6 +278,7 @@ const CATALOG = [{"t":"1100 Plumbing","p":"Faucet Replacement","d":"Bath or kitc
 
 let lastScanData = null;
 let walkthroughItems = [];
+let fsboPrice = null; // set when user enters a manual asking price (FSBO/off-market)
 
 function catalogTrades(){
   return [...new Set(CATALOG.map(r => r.t))].sort();
@@ -397,6 +401,72 @@ function estimateRehab(sqft, yearBuilt){
   return { base: Math.round(base), unknownsBuffer: Math.round(unknownsBuffer), total: Math.round(base + unknownsBuffer) };
 }
 
+function showFSBOForm(address) {
+  // Show the manual override button (in case it was hidden)
+  const manualBtn = document.getElementById('fsboManualBtn');
+  if (manualBtn) manualBtn.style.display = 'block';
+
+  const emptyState = document.getElementById('emptyState');
+  emptyState.style.display = 'block';
+  const addr = address || document.getElementById('addressInput').value || '';
+  emptyState.innerHTML = `
+    <div class="glyph">⌂</div>
+    <p style="margin-bottom:6px;"><strong>No active listing found</strong> for this address.</p>
+    <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">This may be For Sale By Owner or off-market. Enter the asking price below to run your analysis.</p>
+    <div style="display:flex; gap:8px; align-items:center; max-width:340px; margin:0 auto;">
+      <input type="number" id="fsboPriceInput" placeholder="Asking price" min="0" step="1000"
+        style="flex:1; padding:10px 12px; background:var(--card); border:1px solid var(--line); border-radius:7px; color:var(--paper); font-family:var(--mono); font-size:15px; outline:none;"
+        onkeydown="if(event.key==='Enter') applyFSBOPrice()">
+      <button onclick="applyFSBOPrice()"
+        style="padding:10px 18px; background:var(--copper); border:none; border-radius:7px; color:#fff; font-family:var(--mono); font-size:13px; letter-spacing:0.5px; cursor:pointer; white-space:nowrap;">
+        Analyze ▶
+      </button>
+    </div>
+  `;
+  setTimeout(() => { const el = document.getElementById('fsboPriceInput'); if(el) el.focus(); }, 100);
+}
+
+function applyFSBOPrice() {
+  const input = document.getElementById('fsboPriceInput');
+  const price = parseFloat(input ? input.value : 0);
+  if (!price || price <= 0) {
+    if (input) input.style.border = '1px solid var(--red)';
+    return;
+  }
+  const address = document.getElementById('addressInput').value || 'FSBO Property';
+  fsboPrice = price;
+
+  // Build a synthetic data object so renderResults works unchanged
+  const sqft = 1600, yearBuilt = 1990;
+  const rehab = estimateRehab(sqft, yearBuilt);
+  const arv = price * 1.25; // rough placeholder — user can't override here yet
+
+  lastScanData = {
+    address,
+    sqft,
+    yearBuilt,
+    listPrice: price,
+    arv,
+    listingStatus: 'FSBO / Off-Market',
+    distressSignals: [],
+    rehabTier: 'estimated',
+    rehab,
+    comps: [],
+    _isFSBO: true,
+  };
+
+  document.getElementById('emptyState').style.display = 'none';
+  walkthroughItems = [];
+  renderResults();
+}
+
+function applyFSBOArv() {
+  const input = document.getElementById('fsboArvInput');
+  const arv = parseFloat(input ? input.value : 0);
+  if (!arv || arv <= 0) { if(input) input.style.border='1px solid var(--red)'; return; }
+  if (lastScanData) { lastScanData.arv = arv; renderResults(); }
+}
+
 function evaluateDeal({ listPrice, arv, rehabTotal, wantedProfit }){
   const closingCosts = listPrice * 0.035;
   const sellingCosts = arv * (0.0125 + 0.03 + 0.06);
@@ -467,14 +537,9 @@ async function runScan(){
     data = await fetchRealScan(address);
   }catch(err){
     if (err.status === 404) {
-      // Genuinely normal outcome — this address just isn't for sale right now. Not a failure.
+      // No active listing — could be FSBO or off-market. Offer manual price entry.
       statusLine.textContent = "";
-      const emptyState = document.getElementById('emptyState');
-      emptyState.style.display = "block";
-      emptyState.innerHTML = `
-        <div class="glyph">⌂</div>
-        <p><strong>No current listing found in our data</strong> for this address.<br>This doesn't mean the property isn't for sale — it means our data source (RentCast) doesn't have an active record for it. If you know this house is listed, try the exact address as it appears on the sign or MLS.</p>
-      `;
+      showFSBOForm(address);
       btn.disabled = false;
       return;
     }
@@ -497,6 +562,9 @@ async function runScan(){
 
   lastScanData = data;
   walkthroughItems = [];
+  // After a live scan succeeds, show the manual override button
+  const manualBtn = document.getElementById('fsboManualBtn');
+  if (manualBtn) manualBtn.style.display = 'block';
   renderResults();
 }
 
@@ -509,14 +577,28 @@ function renderResults(){
   const rehabTotalUsed = usingWalkthrough ? walkthroughTotal() : data.rehab.total;
   const deal = evaluateDeal({ listPrice: data.listPrice, arv: data.arv, rehabTotal: rehabTotalUsed, wantedProfit });
 
+  const fsboBadge = data._isFSBO
+    ? `<div style="margin-top:6px; display:inline-block; padding:3px 10px; background:rgba(181,101,47,0.18); border:1px solid var(--copper); border-radius:5px; font-family:var(--mono); font-size:10px; letter-spacing:0.8px; color:var(--copper-bright);">FSBO / OFF-MARKET</div>`
+    : '';
+
+  const fsboArvNote = data._isFSBO
+    ? `<div style="margin:12px 0 4px; font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:0.5px;">ARV IS ESTIMATED — enter your own below to refine:</div>
+       <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
+         <input type="number" id="fsboArvInput" placeholder="Your ARV" value="${Math.round(data.arv)}"
+           style="flex:1; max-width:180px; padding:8px 10px; background:var(--card); border:1px solid var(--line); border-radius:6px; color:var(--paper); font-family:var(--mono); font-size:14px; outline:none;">
+         <button onclick="applyFSBOArv()" style="padding:8px 14px; background:var(--copper); border:none; border-radius:6px; color:#fff; font-family:var(--mono); font-size:12px; cursor:pointer;">Update</button>
+       </div>`
+    : '';
+
   const wrap = document.getElementById('resultsWrap');
   wrap.innerHTML = `
     <div class="verdict-banner ${deal.isDeal ? 'deal' : 'nodeal'}">
       <div>
         <div class="verdict-word">${deal.isDeal ? 'DEAL' : 'NO DEAL'}</div>
         <div class="verdict-sub">${data.address}</div>
+        ${fsboBadge}
         <div class="status-badge ${data.listingStatus === 'Active' ? 'active' : 'inactive'}">
-          ${data.listingStatus === 'Active' ? 'Active on Market' : 'Not Actively Listed'}
+          ${data.listingStatus === 'Active' ? 'Active on Market' : data.listingStatus}
         </div>
       </div>
       <div class="verdict-profit">
@@ -525,8 +607,9 @@ function renderResults(){
       </div>
     </div>
 
+    ${fsboArvNote}
     <div class="metrics-grid">
-      <div class="metric-cell"><span class="lbl">List Price</span><span class="val">${money(data.listPrice)}</span></div>
+      <div class="metric-cell"><span class="lbl">${data._isFSBO ? 'Asking Price' : 'List Price'}</span><span class="val">${money(data.listPrice)}</span></div>
       <div class="metric-cell"><span class="lbl">ARV</span><span class="val">${money(data.arv)}</span></div>
       <div class="metric-cell"><span class="lbl">${usingWalkthrough ? 'Rehab (Walkthrough)' : 'Rehab (Formula Est.)'}</span><span class="val">${money(rehabTotalUsed)}</span></div>
       <div class="metric-cell"><span class="lbl">Max Offer (MAO)</span><span class="val">${money(deal.mao)}</span></div>
