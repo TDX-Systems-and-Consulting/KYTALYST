@@ -433,25 +433,23 @@ function applyFSBOPrice() {
     if (input) input.style.border = '1px solid var(--red)';
     return;
   }
-  const address = document.getElementById('addressInput').value || 'FSBO Property';
   fsboPrice = price;
 
-  // Build a synthetic data object so renderResults works unchanged
-  const sqft = 1600, yearBuilt = 1990;
-  const rehab = estimateRehab(sqft, yearBuilt);
-  const arv = price * 1.25; // rough placeholder — user can't override here yet
+  // Merge asking price into whatever data the backend already returned
+  // (lastScanData has real AVM comps + ARV even for no-listing addresses)
+  const existing = lastScanData || {};
+  const sqft = existing.sqft || 1600;
+  const yearBuilt = existing.yearBuilt || 1990;
+  const rehab = existing.rehab || estimateRehab(sqft, yearBuilt);
 
   lastScanData = {
-    address,
-    sqft,
-    yearBuilt,
-    listPrice: price,
-    arv,
+    ...existing,
+    listPrice: price,                            // user's asking price
     listingStatus: 'FSBO / Off-Market',
-    distressSignals: [],
-    rehabTier: 'estimated',
+    distressSignals: existing.distressSignals || [],
+    rehabTier: existing.rehabTier || 'estimated',
     rehab,
-    comps: [],
+    comps: existing.comps || [],                 // real comps from AVM
     _isFSBO: true,
   };
 
@@ -535,14 +533,16 @@ async function runScan(){
   let usingMock = false;
   try{
     data = await fetchRealScan(address);
-  }catch(err){
-    if (err.status === 404) {
-      // No active listing — could be FSBO or off-market. Offer manual price entry.
+    // Backend now returns 200 even for FSBO/off-market — check the flag
+    if (data.listingNotFound) {
       statusLine.textContent = "";
+      // Store the partial data (has comps + ARV from AVM) so FSBO form can merge it
+      lastScanData = data;
       showFSBOForm(address);
       btn.disabled = false;
       return;
     }
+  }catch(err){
     console.warn("Live backend failed, falling back to mock:", err.message);
     usingMock = true;
     const detailEl = document.getElementById('mockErrorDetail');
