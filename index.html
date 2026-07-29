@@ -671,7 +671,20 @@ function renderResults(){
 
     <div class="section">
       <div class="section-head">Comparable Sales</div>
-      ${(data.comps && data.comps.length) ? data.comps.map(c => `<div class="comp-row"><span class="comp-addr">${c.addr}</span><span class="comp-price">${money(c.price)}</span></div>`).join('') : '<div class="comp-row"><span class="comp-addr">No comps returned</span></div>'}
+      ${(data.comps && data.comps.length) ? data.comps.map(c => {
+        const details = [
+          c.beds ? `${c.beds}bd` : null,
+          c.baths ? `${c.baths}ba` : null,
+          c.sqft ? `${c.sqft.toLocaleString()}sf` : null,
+        ].filter(Boolean).join(' · ');
+        return `<div class="comp-row">
+          <span class="comp-addr">
+            ${c.addr}
+            ${details ? `<span style="font-size:11px; color:var(--muted); margin-left:6px;">${details}</span>` : ''}
+          </span>
+          <span class="comp-price">${money(c.price)}</span>
+        </div>`;
+      }).join('') : '<div class="comp-row"><span class="comp-addr">No comps returned</span></div>'}
     </div>
 
     ${data.agentName ? `
