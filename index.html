@@ -597,9 +597,9 @@ function renderResults(){
         <div class="verdict-word">${deal.isDeal ? 'DEAL' : 'NO DEAL'}</div>
         <div class="verdict-sub">${data.address}</div>
         ${fsboBadge}
-        <div class="status-badge ${data.listingStatus === 'Active' ? 'active' : 'inactive'}">
+        ${!data._isFSBO ? `<div class="status-badge ${data.listingStatus === 'Active' ? 'active' : 'inactive'}">
           ${data.listingStatus === 'Active' ? 'Active on Market' : data.listingStatus}
-        </div>
+        </div>` : ''}
       </div>
       <div class="verdict-profit">
         <div class="num">${money(deal.projectedProfit)}</div>
