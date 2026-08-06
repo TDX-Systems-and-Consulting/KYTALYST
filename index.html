@@ -590,20 +590,31 @@ function renderResults(){
        </div>`
     : '';
 
+  const GKEY = "AIzaSyBBJGJy8fxsb5C63eCXQnq1MN14OX8D5-0";
+  const svUrl = (addr, w=640, h=200) =>
+    `https://maps.googleapis.com/maps/api/streetview?size=${w}x${h}&location=${encodeURIComponent(addr)}&fov=90&pitch=5&key=${GKEY}`;
+
   const wrap = document.getElementById('resultsWrap');
   wrap.innerHTML = `
-    <div class="verdict-banner ${deal.isDeal ? 'deal' : 'nodeal'}">
-      <div>
-        <div class="verdict-word">${deal.isDeal ? 'DEAL' : 'NO DEAL'}</div>
-        <div class="verdict-sub">${data.address}</div>
-        ${fsboBadge}
-        ${!data._isFSBO ? `<div class="status-badge ${data.listingStatus === 'Active' ? 'active' : 'inactive'}">
-          ${data.listingStatus === 'Active' ? 'Active on Market' : data.listingStatus}
-        </div>` : ''}
+    <div class="verdict-banner ${deal.isDeal ? 'deal' : 'nodeal'}" style="padding:0; overflow:hidden; flex-direction:column;">
+      <div style="position:relative; width:100%; height:180px; overflow:hidden; border-radius:10px 10px 0 0;">
+        <img src="${svUrl(data.address)}" alt="Street view" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.parentElement.style.display='none'">
+        <div style="position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.7));"></div>
+        <div style="position:absolute; bottom:12px; left:14px; right:14px; display:flex; justify-content:space-between; align-items:flex-end;">
+          <div>
+            <div class="verdict-word" style="margin:0;">${deal.isDeal ? 'DEAL' : 'NO DEAL'}</div>
+            <div class="verdict-sub" style="color:rgba(255,255,255,0.8);">${data.address}</div>
+            ${fsboBadge}
+            ${!data._isFSBO ? `<div class="status-badge ${data.listingStatus === 'Active' ? 'active' : 'inactive'}" style="margin-top:4px;">
+              ${data.listingStatus === 'Active' ? 'Active on Market' : data.listingStatus}
+            </div>` : ''}
+          </div>
+          <div class="verdict-profit" style="text-align:right; flex-shrink:0; margin-left:12px;">
+            <div class="num">${money(deal.projectedProfit)}</div>
+            <div class="lbl">Projected Profit</div>
+          </div>
+        </div>
       </div>
-      <div class="verdict-profit">
-        <div class="num">${money(deal.projectedProfit)}</div>
-        <div class="lbl">Projected Profit</div>
       </div>
     </div>
 
@@ -677,12 +688,13 @@ function renderResults(){
           c.baths ? `${c.baths}ba` : null,
           c.sqft ? `${c.sqft.toLocaleString()}sf` : null,
         ].filter(Boolean).join(' · ');
-        return `<div class="comp-row">
-          <span class="comp-addr">
-            ${c.addr}
-            ${details ? `<span style="font-size:11px; color:var(--muted); margin-left:6px;">${details}</span>` : ''}
-          </span>
-          <span class="comp-price">${money(c.price)}</span>
+        return `<div class="comp-row" style="display:flex; align-items:center; gap:10px; padding:10px 0;">
+          <img src="${svUrl(c.addr)}" alt="" style="width:72px; height:52px; object-fit:cover; border-radius:5px; flex-shrink:0; background:var(--card);" onerror="this.style.display='none'">
+          <div style="flex:1; min-width:0;">
+            <div class="comp-addr" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.addr}</div>
+            ${details ? `<div style="font-size:11px; color:var(--muted); margin-top:2px;">${details}</div>` : ''}
+          </div>
+          <span class="comp-price" style="flex-shrink:0;">${money(c.price)}</span>
         </div>`;
       }).join('') : '<div class="comp-row"><span class="comp-addr">No comps returned</span></div>'}
     </div>
