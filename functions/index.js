@@ -15,15 +15,37 @@ Output exactly this JSON structure and nothing else:
   "confidence": "high" or "medium" or "low"
 }`;
 
-function estimateRehab(sqft, yearBuilt) {
+function estimateRehab(sqft, yearBuilt, rehabTier) {
   const currentYear = new Date().getFullYear();
   const age = currentYear - (yearBuilt || currentYear - 40);
-  let base = 25000;
-  base += age > 40 ? 3000 : age > 20 ? 1000 : 0;
-  const over2000 = Math.max(0, Math.floor((sqft - 2000) / 500));
-  base += over2000 * 3000;
+  const sqftUsed = sqft || 1600;
+
+  // $/sqft base rate keyed to the distress signal already detected from the
+  // listing text via Claude above -- this is the actual fix. Previously this
+  // function never looked at rehabTier at all, so a "handyman special, gut,
+  // fire damage" listing and a move-in-ready listing of the same size and
+  // age got an identical rehab guess. These per-sqft figures are rough
+  // industry-standard flip rehab ranges (light cosmetic vs. mid vs. full
+  // gut) -- not tied to 7 Pillars' real catalog costs, since that requires
+  // an actual walkthrough (that's what the Live Walkthrough section is for).
+  const RATE_BY_TIER = { none: 15, light: 30, heavy: 60 };
+  const perSqft = RATE_BY_TIER[rehabTier] || RATE_BY_TIER.none;
+
+  let base = sqftUsed * perSqft;
+
+  // Age adds systems risk (HVAC/electrical/plumbing/roof) on top of
+  // whatever the cosmetic/distress-tier rate already covers -- an older
+  // home can look "none detected" cosmetically and still need a furnace.
+  base += age > 40 ? 6000 : age > 20 ? 2500 : 0;
+
   const unknownsBuffer = base * 0.25;
-  return { base: Math.round(base), unknownsBuffer: Math.round(unknownsBuffer), total: Math.round(base + unknownsBuffer) };
+  return {
+    base: Math.round(base),
+    unknownsBuffer: Math.round(unknownsBuffer),
+    total: Math.round(base + unknownsBuffer),
+    perSqft,
+    rehabTier: rehabTier || 'none',
+  };
 }
 
 function evaluateDeal({ listPrice, arv, rehabTotal, wantedProfit }) {
@@ -186,7 +208,7 @@ http('kytalystScan', async (req, res) => {
       }
     }
 
-    const rehab = estimateRehab(sqft, yearBuilt);
+    const rehab = estimateRehab(sqft, yearBuilt, distress.rehab_tier);
 
     res.status(200).json({
       address,

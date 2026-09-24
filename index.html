@@ -390,15 +390,16 @@ function removeWalkthroughItem(idx){
   }
 })();
 
-function estimateRehab(sqft, yearBuilt){
+function estimateRehab(sqft, yearBuilt, rehabTier){
   const currentYear = new Date().getFullYear();
   const age = currentYear - (yearBuilt || currentYear - 40);
-  let base = 25000;
-  base += age > 40 ? 3000 : (age > 20 ? 1000 : 0);
-  const over2000 = Math.max(0, Math.floor((sqft - 2000) / 500));
-  base += over2000 * 3000;
+  const sqftUsed = sqft || 1600;
+  const RATE_BY_TIER = { none: 15, light: 30, heavy: 60 };
+  const perSqft = RATE_BY_TIER[rehabTier] || RATE_BY_TIER.none;
+  let base = sqftUsed * perSqft;
+  base += age > 40 ? 6000 : (age > 20 ? 2500 : 0);
   const unknownsBuffer = base * 0.25;
-  return { base: Math.round(base), unknownsBuffer: Math.round(unknownsBuffer), total: Math.round(base + unknownsBuffer) };
+  return { base: Math.round(base), unknownsBuffer: Math.round(unknownsBuffer), total: Math.round(base + unknownsBuffer), perSqft, rehabTier: rehabTier || 'none' };
 }
 
 function showFSBOForm(address) {
@@ -440,14 +441,14 @@ function applyFSBOPrice() {
   const existing = lastScanData || {};
   const sqft = existing.sqft || 1600;
   const yearBuilt = existing.yearBuilt || 1990;
-  const rehab = existing.rehab || estimateRehab(sqft, yearBuilt);
+  const rehab = existing.rehab || estimateRehab(sqft, yearBuilt, existing.rehabTier);
 
   lastScanData = {
     ...existing,
     listPrice: price,                            // user's asking price
     listingStatus: 'FSBO / Off-Market',
     distressSignals: existing.distressSignals || [],
-    rehabTier: existing.rehabTier || 'estimated',
+    rehabTier: existing.rehabTier || 'none',
     rehab,
     comps: existing.comps || [],                 // real comps from AVM
     _isFSBO: true,
@@ -484,7 +485,7 @@ function money(n){
 async function fetchMockScan(address){
   await new Promise(r => setTimeout(r, 900));
   const sqft = 1657, yearBuilt = 2004, listPrice = 160000, arv = 255000;
-  const rehab = estimateRehab(sqft, yearBuilt);
+  const rehab = estimateRehab(sqft, yearBuilt, "heavy");
   return {
     address, sqft, yearBuilt, listPrice, arv,
     listingStatus: "Active",
@@ -598,7 +599,7 @@ function renderResults(){
   wrap.innerHTML = `
     <div class="verdict-banner ${deal.isDeal ? 'deal' : 'nodeal'}" style="padding:0; overflow:hidden; flex-direction:column;">
       <div style="position:relative; width:100%; height:180px; overflow:hidden; border-radius:10px 10px 0 0;">
-        <img src="${svUrl(data.address)}" alt="Street view" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.parentElement.style.display='none'">
+        <img src="${svUrl(data.address)}" alt="Street view" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.style.display='none'">
         <div style="position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.7));"></div>
         <div style="position:absolute; bottom:12px; left:14px; right:14px; display:flex; justify-content:space-between; align-items:flex-end;">
           <div>
