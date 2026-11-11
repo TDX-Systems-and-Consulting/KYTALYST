@@ -11,8 +11,8 @@ const fixture = { address:'123 Test St, Wentzville, MO 63385',listPrice:160000,a
   rehab:{total:127000},comps:[{addr:'125 Test St',price:250000,beds:3,baths:2,sqft:1600}] };
 const server = http.createServer((req,res) => {
   const name = new URL(req.url,'http://localhost').pathname;
-  if (!['/','/index.html','/rehab-budget.js'].includes(name)) {res.writeHead(404).end();return;}
-  res.setHeader('Content-Type', name.endsWith('.js') ? 'application/javascript' : 'text/html');
+  if (!['/','/index.html','/rehab-budget.js','/design.css'].includes(name)) {res.writeHead(404).end();return;}
+  res.setHeader('Content-Type', name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html');
   res.end(fs.readFileSync(path.join(root,name==='/'?'index.html':name.slice(1))));
 });
 (async () => {
@@ -44,6 +44,14 @@ const server = http.createServer((req,res) => {
     };
     const text = sel => page.locator(sel).innerText();
     await page.goto(origin);
+    assert.equal(await page.locator('h1').innerText(),'Find the upside.');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    if(process.env.SCREENSHOT_DIR){
+      await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'home-mobile.png'),fullPage:true});
+      await page.setViewportSize({width:1440,height:1000});
+      await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'home-desktop.png'),fullPage:true});
+      await page.setViewportSize({width:390,height:844});
+    }
     assert.equal(await page.locator('#addressInput').isVisible(),true,'manual field remains when Maps fails');
     await scan();await page.locator('#hipshotInput').waitFor();
     assert.equal(await text('#projectedProfit'),'—');
@@ -53,11 +61,15 @@ const server = http.createServer((req,res) => {
     assert.equal(await text('#hipshotLow'),'$27,000.00');
     assert.equal(await text('#hipshotHigh'),'$33,000.00');
     assert.equal(await text('#projectedProfit'),'$33,263');
+    assert.equal(await page.locator('.allocation-bar>span').count(),4);
+    assert.match(await text('#profitTarget'),/above your/);
     await page.locator('#hipshotInput').fill('65800');
     await page.locator('#hipshotInput').press('Enter');
     assert.equal(await text('#hipshotLow'),'$59,220.00');
     assert.equal(await text('#hipshotHigh'),'$72,380.00');
     assert.match(await text('#budgetStorage'),/Saved/);
+    assert.match(await text('#dealAllocation'),/Projected loss/);
+    assert.equal(await page.locator('#verdictBanner').getAttribute('class'),'verdict-banner nodeal');
     await page.locator('#hipshotInput').fill('40000');
     assert.equal(await text('#projectedProfit'),'—');
     await page.getByRole('button',{name:'Save Hipshot',exact:true}).click();
@@ -86,9 +98,14 @@ const server = http.createServer((req,res) => {
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
     if(process.env.SCREENSHOT_DIR){
       await page.locator('#hipshotInput').scrollIntoViewIfNeeded();
-      await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'rehab-mobile.png')});
+      await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'rehab-mobile.png'),fullPage:true});
       await page.setViewportSize({width:1280,height:900});
       await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'rehab-desktop.png'),fullPage:true});
+      await page.locator('#themeToggleBtn').click();
+      assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
+      await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'workspace-light.png'),fullPage:true});
+      await page.locator('#themeToggleBtn').click();
+      await page.setViewportSize({width:390,height:844});
     }
     mode='fsbo';await scan('200 Off Market St, MO');
     await page.locator('#fsboPriceInput').fill('100000');

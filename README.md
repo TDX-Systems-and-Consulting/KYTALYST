@@ -19,6 +19,10 @@ Existing non-rehab assumptions: $20,000 target profit, 3.5% acquisition closing 
 - Projected profit = ARV × (1 − 0.1025) − purchase price × 1.035 − Hipshot.
 - Maximum offer = (ARV × (1 − 0.1025) − Hipshot − target profit) ÷ 1.035.
 
+## Workspace design
+
+The responsive charcoal/copper workspace includes a property overview, target-profit indicator, saved-budget cost allocation, light/dark themes, loading states and reduced-motion support. Visuals use current scan data and saved Hipshot values; no sample deal numbers appear in production. The main analysis collapses the intro to keep the workspace compact on phones.
+
 ## Checks and publishing
 
 Requires Node.js 20+.
@@ -32,4 +36,4 @@ npm run test:browser
 
 Tests use property fixtures and never call paid APIs. Unit/DOM checks cover ±10% ranges, base-budget profit, edits, persistence, property isolation, validation, FSBO and failed requests. Browser checks also cover mobile overflow and the single address field with Maps loaded or unavailable. GitHub Actions saves mobile and desktop screenshots. `SCREENSHOT_DIR` optionally selects an existing screenshot folder; `CHROMIUM_PATH` selects a local Chromium binary.
 
-Serve locally with `python3 -m http.server 8000`. Publish `index.html` and `rehab-budget.js` together. No Cloud Function redeployment is required; the backend and daily shortlist retain their existing behavior.
+Serve locally with `python3 -m http.server 8000`. Publish `index.html`, `design.css`, and `rehab-budget.js` together. No Cloud Function redeployment is required; the backend and daily shortlist retain their existing behavior.
