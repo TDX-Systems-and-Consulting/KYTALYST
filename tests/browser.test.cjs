@@ -27,9 +27,11 @@ const server = http.createServer((req,res) => {
       const url=route.request().url();
       if (url.startsWith(origin)) return route.continue();
       if (url.includes('cloudfunctions.net/kytalystScan')) {
+        const headers = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type'};
+        if(route.request().method()==='OPTIONS') return route.fulfill({status:204,headers});
         const address=route.request().postDataJSON().address;
-        if(mode==='error') return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:'Test backend unavailable'})});
-        return route.fulfill({contentType:'application/json',body:JSON.stringify({...fixture,address,
+        if(mode==='error') return route.fulfill({status:500,headers,contentType:'application/json',body:JSON.stringify({error:'Test backend unavailable'})});
+        return route.fulfill({headers,contentType:'application/json',body:JSON.stringify({...fixture,address,
           ...(mode==='fsbo'?{listingNotFound:true,listPrice:0,arv:0}:{})})});
       }
       return route.abort();
