@@ -47,9 +47,9 @@ const server = http.createServer((req,res) => {
     assert.equal(await page.locator('h1').innerText(),'Find the upside.');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     if(process.env.SCREENSHOT_DIR){
-      await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'home-mobile.png'),fullPage:true});
+      await page.screenshot({animations:'disabled',path:path.join(process.env.SCREENSHOT_DIR,'home-mobile.png'),fullPage:true});
       await page.setViewportSize({width:1440,height:1000});
-      await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'home-desktop.png'),fullPage:true});
+      await page.screenshot({animations:'disabled',path:path.join(process.env.SCREENSHOT_DIR,'home-desktop.png'),fullPage:true});
       await page.setViewportSize({width:390,height:844});
     }
     assert.equal(await page.locator('#addressInput').isVisible(),true,'manual field remains when Maps fails');
@@ -98,12 +98,12 @@ const server = http.createServer((req,res) => {
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
     if(process.env.SCREENSHOT_DIR){
       await page.locator('#hipshotInput').scrollIntoViewIfNeeded();
-      await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'rehab-mobile.png'),fullPage:true});
+      await page.screenshot({animations:'disabled',path:path.join(process.env.SCREENSHOT_DIR,'rehab-mobile.png'),fullPage:true});
       await page.setViewportSize({width:1280,height:900});
-      await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'rehab-desktop.png'),fullPage:true});
+      await page.screenshot({animations:'disabled',path:path.join(process.env.SCREENSHOT_DIR,'rehab-desktop.png'),fullPage:true});
       await page.locator('#themeToggleBtn').click();
       assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
-      await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'workspace-light.png'),fullPage:true});
+      await page.screenshot({animations:'disabled',path:path.join(process.env.SCREENSHOT_DIR,'workspace-light.png'),fullPage:true});
       await page.locator('#themeToggleBtn').click();
       await page.setViewportSize({width:390,height:844});
     }
@@ -155,7 +155,7 @@ const server = http.createServer((req,res) => {
     assert.equal(await withMaps.locator('#addressInput').isVisible(),false);
     assert.equal(await withMaps.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     if(process.env.SCREENSHOT_DIR){
-      await withMaps.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'address-mobile.png')});
+      await withMaps.screenshot({animations:'disabled',path:path.join(process.env.SCREENSHOT_DIR,'address-mobile.png')});
     }
     assert.deepEqual(errors,[]);
     console.log('Browser checks passed: Hipshot range and base amount, edits, persistence, validation, FSBO, failures, mobile layout, single address field with Maps loaded/unavailable.');

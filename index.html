@@ -29,7 +29,7 @@
     <div class="intro-copy">
       <div class="eyebrow"><span></span> See the potential. Know the numbers.</div>
       <h1 id="introTitle">Find the <em>upside.</em></h1>
-      <p>Turn a property into a clearer decision.<br>One address. Your rehab budget. The full picture.</p>
+      <p>Turn a property into a clearer decision.<br> One address. Your rehab budget. The full picture.</p>
       <div class="intro-caption"><span class="caption-rule"></span> Built for the way investors think.</div>
     </div>
     <div class="architecture" aria-hidden="true">
@@ -70,7 +70,7 @@
 
   <div class="empty-state" id="emptyState">
     <div class="empty-symbol" aria-hidden="true">↗</div>
-    <div><div class="section-kicker">Ready when you are</div><h2>Your next deal starts here.</h2><p>Scan an address above. We’ll bring the property details.<br>You bring the vision.</p></div>
+    <div><div class="section-kicker">Ready when you are</div><h2>Your next deal starts here.</h2><p>Scan an address above. We’ll bring the property details.<br> You bring the vision.</p></div>
     <div class="empty-outline" aria-hidden="true"><span>PROPERTY VALUE <b>—</b></span><span>YOUR HIPSHOT <b>—</b></span><span>THE UPSIDE <b>—</b></span></div>
   </div>
   </main>
@@ -395,6 +395,9 @@ async function runScan(){
   btn.disabled = true;
   btn.classList.add('is-loading');
   document.body.classList.add('is-scanning');
+  document.getElementById('stepScan').className = 'workflow-step is-current';
+  document.getElementById('stepBudget').className = 'workflow-step';
+  document.getElementById('stepReview').className = 'workflow-step';
   statusLine.textContent = "Pulling property data + comps…";
   document.getElementById('resultsWrap').innerHTML = "";
   document.getElementById('emptyState').style.display = "none";
