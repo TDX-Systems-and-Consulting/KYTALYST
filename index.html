@@ -279,7 +279,7 @@
     <p>Scan a property and enter your Hipshot rehab budget to calculate profit and your maximum offer.</p>
   </div>
 
-<script src="rehab-budget.js"></script>
+<script src="rehab-budget.js?v=hipshot-save-1"></script>
 <script>
 // --- Light/Dark theme toggle (same pattern as JOBSpan) ---
 function applyTheme(theme){
@@ -301,6 +301,7 @@ const CLOUD_FUNCTION_URL = "https://us-central1-kytrac-72d91.cloudfunctions.net/
 
 let lastScanData = null;
 let hipshotAmount = '';
+let hipshotSaved = false;
 let budgetStorageMessage = '';
 let autocompleteElement = null;
 
@@ -320,11 +321,13 @@ function saveBudget(){
 }
 function loadBudget(address){
   hipshotAmount = '';
+  hipshotSaved = false;
   budgetStorageMessage = '';
   try {
     const saved = localStorage.getItem(RehabBudget.key(address));
     if (saved) {
       hipshotAmount = RehabBudget.restore(JSON.parse(saved)).amount;
+      hipshotSaved = hipshotAmount !== '';
       budgetStorageMessage = 'Restored for this property.';
     }
   } catch (_) {
@@ -334,16 +337,42 @@ function loadBudget(address){
 function updateHipshot(input){
   // Clear the old estimate immediately when the field is empty or invalid.
   hipshotAmount = input.value;
-  saveBudget();
+  hipshotSaved = false;
+  budgetStorageMessage = 'Unsaved changes — tap Save Hipshot.';
   refreshBudgetSummary();
   refreshDealMetrics();
 }
+function saveHipshot(){
+  const input = document.getElementById('hipshotInput');
+  hipshotAmount = input.value;
+  hipshotSaved = false;
+  try {
+    const range = RehabBudget.hipshot(hipshotAmount);
+    hipshotAmount = range.amount;
+    input.value = range.amount;
+    hipshotSaved = true;
+    saveBudget();
+    input.blur();
+    refreshBudgetSummary();
+    refreshDealMetrics();
+  } catch (_) {
+    refreshBudgetSummary();
+    refreshDealMetrics();
+    if (typeof RehabBudget !== 'undefined' && typeof RehabBudget.hipshot === 'function') {
+      document.getElementById('budgetError').textContent = 'Enter a valid rehab budget of zero or greater, then tap Save Hipshot.';
+    }
+    document.getElementById('budgetStorage').textContent = 'Not saved.';
+  }
+}
 function refreshBudgetSummary(){
   let range = null;
+  let calculatorReady = typeof RehabBudget !== 'undefined' && typeof RehabBudget.hipshot === 'function';
   try { range = RehabBudget.hipshot(hipshotAmount); } catch (_) {}
   document.getElementById('hipshotLow').textContent = range ? formatCost(range.low) : '—';
   document.getElementById('hipshotHigh').textContent = range ? formatCost(range.high) : '—';
-  document.getElementById('budgetError').textContent = hipshotAmount !== '' && !range ? 'Enter a rehab budget of zero or greater.' : '';
+  document.getElementById('budgetError').textContent = !calculatorReady
+    ? 'The calculator could not load. Refresh this page and try again.'
+    : hipshotAmount !== '' && !range ? 'Enter a rehab budget of zero or greater.' : '';
   document.getElementById('budgetStorage').textContent = budgetStorageMessage;
 }
 function toggleAddressEntry(){
@@ -377,12 +406,12 @@ function refreshDealMetrics(){
   let deal = null;
   try {
     range = RehabBudget.hipshot(hipshotAmount);
-    deal = RehabBudget.evaluate({listPrice:lastScanData.listPrice,arv:lastScanData.arv,rehabTotal:range.amount});
+    if (hipshotSaved) deal = RehabBudget.evaluate({listPrice:lastScanData.listPrice,arv:lastScanData.arv,rehabTotal:range.amount});
   } catch (_) {}
   document.getElementById('verdictBanner').className = 'verdict-banner ' + (deal ? (deal.isDeal ? 'deal' : 'nodeal') : 'pending');
-  document.getElementById('verdictWord').textContent = deal ? (deal.isDeal ? 'DEAL' : 'NO DEAL') : (range ? 'ENTER PRICE / ARV' : 'HIPSHOT NEEDED');
+  document.getElementById('verdictWord').textContent = deal ? (deal.isDeal ? 'DEAL' : 'NO DEAL') : (range ? (hipshotSaved ? 'ENTER PRICE / ARV' : 'SAVE HIPSHOT') : 'HIPSHOT NEEDED');
   document.getElementById('projectedProfit').textContent = deal ? money(deal.projectedProfit) : '—';
-  document.getElementById('metricRehab').textContent = range ? formatCost(range.amount) : 'Enter Hipshot';
+  document.getElementById('metricRehab').textContent = range ? (hipshotSaved ? formatCost(range.amount) : 'Save Hipshot') : 'Enter Hipshot';
   document.getElementById('metricMao').textContent = deal ? money(deal.mao) : '—';
   document.getElementById('metricPrice').textContent = money(lastScanData.listPrice);
   document.getElementById('metricArv').textContent = lastScanData.arv > 0 ? money(lastScanData.arv) : 'Enter ARV';
@@ -393,15 +422,16 @@ function renderBudget(){
       <div class="section-head">Hipshot</div>
       <div class="walkthrough-box">
         <label class="budget-field">Your rehab budget ($)
-          <input id="hipshotInput" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 30000" value="${escapeHtml(hipshotAmount)}" oninput="updateHipshot(this)">
+          <input id="hipshotInput" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 30000" value="${escapeHtml(hipshotAmount)}" oninput="updateHipshot(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();saveHipshot();}">
         </label>
+        <button type="button" id="saveHipshotBtn" class="budget-btn" style="margin-top:12px;" onclick="saveHipshot()">Save Hipshot</button>
         <div class="hipshot-range" aria-live="polite">
           <div><span>−10%</span><strong id="hipshotLow">—</strong></div>
           <div><span>+10%</span><strong id="hipshotHigh">—</strong></div>
         </div>
-        <p class="budget-note">Profit and max offer use your entered budget.</p>
+        <p class="budget-note">Save your budget to update profit and max offer.</p>
         <div id="budgetError" class="budget-error" role="alert"></div>
-        <p id="budgetStorage" class="budget-note"></p>
+        <p id="budgetStorage" class="budget-note" role="status"></p>
       </div>
     </div>`;
 }

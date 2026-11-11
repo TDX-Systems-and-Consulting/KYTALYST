@@ -15,11 +15,16 @@ vm.runInContext(scripts.at(-1).textContent,context);
 const d=window.document;const el=id=>d.getElementById(id);const value=(id,v)=>{el(id).value=String(v)};
 const run=code=>vm.runInContext(code,context);
 const scan=async(address='123 Test St')=>{value('addressInput',address);await run('runScan()')};
-function hipshot(amount){value('hipshotInput',amount);run("updateHipshot(document.getElementById('hipshotInput'))")}
+function hipshot(amount){
+  value('hipshotInput',amount);run("updateHipshot(document.getElementById('hipshotInput'))");
+  assert.equal(el('projectedProfit').textContent,'—','editing withholds figures until saved');
+  run('saveHipshot()');
+}
 (async()=>{
   await scan();assert.equal(el('projectedProfit').textContent,'—');
   hipshot(30000);assert.equal(el('hipshotLow').textContent,'$27,000.00');
   assert.equal(el('hipshotHigh').textContent,'$33,000.00');assert.equal(el('projectedProfit').textContent,'$33,263');
+  value('hipshotInput',65800);run('saveHipshot()');assert.equal(el('hipshotLow').textContent,'$59,220.00');assert.equal(el('hipshotHigh').textContent,'$72,380.00');
   hipshot(40000);assert.equal(el('projectedProfit').textContent,'$23,263');
   await scan();assert.equal(el('hipshotInput').value,'40000');
   await scan('124 Test St');assert.equal(el('hipshotInput').value,'');assert.equal(el('projectedProfit').textContent,'—');
