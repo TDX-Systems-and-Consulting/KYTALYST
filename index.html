@@ -3,244 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KYTALYST — Deal Scanner</title>
-<style>
-  :root{
-    --ink:#12181f;
-    --paper:#eef0ea;
-    --card:#1b232c;
-    --line:#2c3641;
-    --copper:#b5652f;
-    --copper-bright:#d97f42;
-    --green:#4f8f5b;
-    --red:#b1483f;
-    --muted:#8592a0;
-    --widget-scheme: dark;
-    --mono: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace;
-    --serif: Georgia, 'Times New Roman', serif;
-    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
-  :root[data-theme="light"]{
-    --ink:#f2efe6;
-    --paper:#1c2420;
-    --card:#ffffff;
-    --line:#d8d3c4;
-    --copper:#a8481f;
-    --copper-bright:#c25a2a;
-    --green:#2f6b3f;
-    --red:#a8382f;
-    --muted:#6b6b60;
-    --widget-scheme: light;
-  }
-  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
-  html,body{margin:0;padding:0;background:var(--ink);color:var(--paper);font-family:var(--sans);}
-  body{min-height:100vh; padding-bottom:60px;}
-
-  .topbar{
-    padding:22px 20px 18px;
-    border-bottom:1px solid var(--line);
-    display:flex; align-items:baseline; justify-content:space-between;
-  }
-  .wordmark{font-family:var(--serif); font-size:22px; letter-spacing:0.5px; font-weight:700; color:var(--paper);}
-  .wordmark span{color:var(--copper-bright);}
-  .tagline{font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px;}
-
-  .theme-toggle{
-    background:transparent; border:1px solid var(--line); color:var(--muted);
-    font-family:var(--mono); font-size:11px; letter-spacing:0.5px; text-transform:uppercase;
-    padding:6px 12px; border-radius:20px; cursor:pointer; align-self:flex-start;
-  }
-  .theme-toggle:active{ border-color:var(--copper); color:var(--copper-bright); }
-
-  .search-panel{padding:24px 20px 8px;}
-  .search-label{font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px; display:block;}
-  .search-row{display:flex; gap:8px;}
-  input[type="text"]{
-    flex:1; background:var(--card); border:1px solid var(--line); color:var(--paper);
-    font-family:var(--sans); font-size:16px; padding:14px 14px; border-radius:2px; outline:none;
-  }
-  input[type="text"]:focus{border-color:var(--copper);}
-  input[type="text"]::placeholder{color:var(--muted);}
-  button.scan-btn{
-    background:var(--copper); color:#fff; border:none; font-family:var(--mono);
-    font-size:13px; letter-spacing:0.5px; text-transform:uppercase; font-weight:600;
-    padding:0 20px; border-radius:2px; cursor:pointer; white-space:nowrap;
-  }
-  button.scan-btn:active{background:var(--copper-bright);}
-  button.scan-btn:disabled{background:#3a4048; color:var(--muted); cursor:default;}
-
-  .status-line{
-    font-family:var(--mono); font-size:12px; color:var(--muted); padding:14px 20px 0; min-height:18px;
-  }
-
-  .verdict-banner{
-    margin:22px 20px 0; padding:20px; border-radius:3px; border:1px solid;
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .verdict-banner.deal{ background:rgba(79,143,91,0.12); border-color:var(--green); }
-  .verdict-banner.nodeal{ background:rgba(177,72,63,0.12); border-color:var(--red); }
-  .verdict-word{font-family:var(--serif); font-size:28px; font-weight:700;}
-  .verdict-banner.deal .verdict-word{color:var(--green);}
-  .verdict-banner.nodeal .verdict-word{color:#e08b83;}
-  .verdict-sub{font-family:var(--mono); font-size:12px; color:var(--muted); margin-top:4px;}
-  .status-badge{
-    display:inline-block; margin-top:8px; font-family:var(--mono); font-size:10.5px;
-    font-weight:600; letter-spacing:0.5px; text-transform:uppercase;
-    padding:3px 9px; border-radius:20px; border:1px solid;
-  }
-  .status-badge.active{ color:var(--green); border-color:var(--green); background:rgba(79,143,91,0.12); }
-  .status-badge.inactive{ color:#e08b83; border-color:var(--red); background:rgba(177,72,63,0.12); }
-  .verdict-profit{text-align:right;}
-  .verdict-profit .num{font-family:var(--mono); font-size:22px; font-weight:600;}
-  .verdict-profit .lbl{font-family:var(--mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;}
-
-  .metrics-grid{
-    display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line);
-    margin:16px 20px 0; border:1px solid var(--line); border-radius:3px; overflow:hidden;
-  }
-  .metric-cell{background:var(--card); padding:14px 16px;}
-  .metric-cell .lbl{font-family:var(--mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; display:block; margin-bottom:6px;}
-  .metric-cell .val{font-family:var(--mono); font-size:17px; font-weight:600; color:var(--paper);}
-
-  .section{margin:24px 20px 0;}
-  .section-head{font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px;}
-
-  .chip-row{display:flex; flex-wrap:wrap; gap:6px;}
-  .chip{
-    font-family:var(--mono); font-size:11px; background:rgba(213,127,66,0.15); color:var(--copper-bright);
-    padding:5px 10px; border-radius:20px; border:1px solid rgba(213,127,66,0.3);
-  }
-
-  .comp-row{
-    display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line);
-    font-family:var(--mono); font-size:13px;
-  }
-  .comp-row:last-child{border-bottom:none;}
-  .comp-addr{color:var(--paper);}
-  .comp-price{color:var(--muted);}
-
-  .rehab-breakdown{font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.9;}
-  .rehab-breakdown .rline{display:flex; justify-content:space-between;}
-  .rehab-breakdown .rline b{color:var(--paper); font-weight:500;}
-
-  .agent-card{
-    display:flex; justify-content:space-between; align-items:center;
-    background:var(--card); border:1px solid var(--line); border-radius:3px; padding:14px 16px;
-  }
-  .agent-name{font-family:var(--serif); font-size:15px; color:var(--paper); font-weight:700;}
-  .agent-office{font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:2px;}
-  .agent-actions{display:flex; gap:8px;}
-  .agent-btn{
-    font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;
-    text-decoration:none; padding:8px 14px; border-radius:20px; border:1px solid var(--copper);
-    color:var(--copper-bright); white-space:nowrap;
-  }
-  .agent-btn:active{ background:var(--copper); color:#fff; }
-
-  .walkthrough-box{
-    background:var(--card); border:1px solid var(--line); border-radius:3px; padding:16px;
-  }
-  .wt-row{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;}
-  .wt-row select, .wt-row input{
-    background:var(--ink); color:var(--paper); border:1px solid var(--line);
-    font-family:var(--sans); font-size:14px; padding:10px; border-radius:2px; outline:none; width:100%;
-  }
-  .wt-qty-add{display:flex; gap:8px;}
-  .wt-qty-add input{width:70px; flex:none;}
-  .wt-add-btn{
-    flex:1; background:var(--green); color:#fff; border:none; font-family:var(--mono);
-    font-size:12px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;
-    border-radius:2px; cursor:pointer;
-  }
-  .wt-item-row{
-    display:flex; justify-content:space-between; align-items:center;
-    padding:9px 0; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12.5px;
-  }
-  .wt-item-row:last-of-type{border-bottom:none;}
-  .wt-item-desc{color:var(--paper);}
-  .wt-item-sub{color:var(--muted); font-size:11px; margin-top:1px;}
-  .wt-item-right{display:flex; align-items:center; gap:10px;}
-  .wt-item-cost{color:var(--paper); font-weight:600;}
-  .wt-remove{
-    background:transparent; border:1px solid var(--red); color:#e08b83; border-radius:20px;
-    font-family:var(--mono); font-size:10px; padding:3px 8px; cursor:pointer;
-  }
-  .wt-total-row{
-    display:flex; justify-content:space-between; align-items:center;
-    margin-top:12px; padding-top:12px; border-top:1px solid var(--line);
-    font-family:var(--mono); font-weight:700; color:var(--paper);
-  }
-  .wt-empty{font-family:var(--mono); font-size:11.5px; color:var(--muted); padding:8px 0;}
-  .wt-source-note{font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:10px; line-height:1.5;}
-
-  .wt-search-results{
-    max-height:260px; overflow-y:auto; border:1px solid var(--line); border-radius:2px; margin-bottom:8px;
-  }
-  .wt-search-row{
-    display:flex; justify-content:space-between; align-items:center; padding:10px 12px;
-    border-bottom:1px solid var(--line); cursor:pointer;
-  }
-  .wt-search-row:last-child{border-bottom:none;}
-  .wt-search-row:active, .wt-search-row.selected{background:rgba(213,127,66,0.12);}
-  .wt-search-main{font-family:var(--sans); font-size:13.5px; color:var(--paper);}
-  .wt-search-sub{font-family:var(--mono); font-size:10.5px; color:var(--muted); margin-top:2px;}
-  .wt-search-price{font-family:var(--mono); font-size:13px; color:var(--copper-bright); font-weight:600; white-space:nowrap; padding-left:10px;}
-
-  .formula-muted{
-    font-family:var(--mono); font-size:11px; color:var(--muted); font-style:italic;
-    padding:4px 0;
-  }
-
-  .empty-state{padding:60px 20px; text-align:center;}
-  .empty-state .glyph{font-size:32px; opacity:0.3; margin-bottom:14px;}
-  .empty-state p{font-family:var(--mono); font-size:12px; color:var(--muted); max-width:280px; margin:0 auto; line-height:1.7;}
-
-
-  /* Places Autocomplete container — wraps Google's element to match the existing input look */
-  /* Places Autocomplete — Google added real CSS support for these directly on the element */
-  .address-autocomplete-wrap{
-    flex:1; position:relative; z-index:10;
-  }
-  .address-autocomplete-wrap gmp-place-autocomplete{
-    width:100%;
-    color-scheme: var(--widget-scheme);
-    background-color: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 2px;
-  }
-
-  body{max-width:960px;margin:0 auto;}
-  .budget-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0;}
-  .budget-grid label,.budget-field{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);min-width:0;}
-  .budget-grid input,.budget-grid select,.budget-field input{box-sizing:border-box;min-width:0;width:100%;background:var(--ink);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:11px;font:inherit;font-size:16px;}
-  .budget-wide{grid-column:1/-1;}
-  .budget-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center;}
-  .budget-btn{border:1px solid var(--copper);background:var(--copper);color:white;padding:11px 14px;border-radius:3px;cursor:pointer;font:inherit;font-size:13px;}
-  .budget-btn.secondary{background:transparent;color:var(--copper-bright);}
-  .budget-item{border:1px solid var(--line);border-radius:3px;padding:12px;margin:12px 0;}
-  .budget-item-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
-  .budget-item-head strong{overflow-wrap:anywhere;}
-  .budget-note{color:var(--muted);font-size:12px;line-height:1.6;margin:8px 0;}
-  .budget-status{color:var(--copper-bright);font-size:12px;line-height:1.6;}
-  .budget-summary{display:grid;gap:10px;margin:14px 0;font-family:var(--mono);font-size:13px;}
-  .budget-summary div{display:flex;justify-content:space-between;gap:12px;}
-  .budget-summary .total{border-top:1px solid var(--line);padding-top:12px;font-size:16px;}
-  .budget-error{color:#e08b83;font-size:13px;line-height:1.6;}
-  .verdict-banner.pending{border-color:var(--copper);background:rgba(181,101,47,0.12);}
-  button:focus-visible,input:focus-visible{outline:2px solid var(--copper-bright);outline-offset:3px;}
-  .search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;}
-  .search-row>*{min-width:0;}
-  .address-autocomplete-wrap{grid-column:auto;}
-  [hidden]{display:none!important;}
-  .address-mode-btn{border:0;background:transparent;color:var(--muted);padding:8px 0;font:inherit;font-size:12px;cursor:pointer;}
-  .hipshot-range{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}
-  .hipshot-range>div{border:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0;}
-  .hipshot-range span{font-size:12px;color:var(--muted);}
-  .hipshot-range strong{font-family:var(--mono);font-size:16px;overflow-wrap:anywhere;}
-  .address-autocomplete-wrap:empty{display:none;}
-  @media(max-width:500px){.verdict-word{font-size:21px;}.verdict-sub{font-size:11px;}.verdict-profit .num{font-size:19px;}}
-  @media(min-width:700px){.budget-item .budget-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
-</style>
+<title>KYTALYST — Find the upside</title>
+<meta name="description" content="Your real estate deal workspace. Scan a property, set your Hipshot rehab budget, and understand the upside.">
+<meta name="theme-color" content="#101917">
+<link rel="stylesheet" href="design.css?v=workspace-1">
 <script>
   (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
     key: "AIzaSyBBJGJy8fxsb5C63eCXQnq1MN14OX8D5-0",
@@ -250,34 +16,65 @@
 </head>
 <body>
 
-  <div class="topbar">
-    <div>
-      <div class="wordmark">KYTA<span>LYST</span></div>
-      <div class="tagline">Deal Scanner</div>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="KYTALYST home">
+      <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 24V10l8-5 8 5v14l-8 5z"/><path d="M12 11v12m1-6 8-6m-8 6 8 6"/></svg></span>
+      <span><span class="wordmark">KYTA<span>LYST</span></span><span class="tagline">A TDX investment workspace</span></span>
+    </a>
+    <div class="nav-actions"><span class="workspace-label"><i></i> Deal workspace</span><button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀ Light</button></div>
+  </header>
+
+  <main>
+  <section class="intro" aria-labelledby="introTitle">
+    <div class="intro-copy">
+      <div class="eyebrow"><span></span> See the potential. Know the numbers.</div>
+      <h1 id="introTitle">Find the <em>upside.</em></h1>
+      <p>Turn a property into a clearer decision.<br> One address. Your rehab budget. The full picture.</p>
+      <div class="intro-caption"><span class="caption-rule"></span> Built for the way investors think.</div>
     </div>
-    <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀ Light</button>
-  </div>
+    <div class="architecture" aria-hidden="true">
+      <div class="architecture-grid"></div>
+      <span class="drawing-label">THE OPPORTUNITY IS IN THE DETAILS</span>
+      <svg viewBox="0 0 460 290" fill="none">
+        <path class="blueprint-muted" d="M25 244H440M58 255V83M410 255V90M45 76H415M100 269H370"/>
+        <path class="blueprint-line" d="m92 132 138-83 138 83v111H92zM92 132h276M230 49v83M108 130l122-72 122 72M118 150h224v93M230 132v111"/>
+        <path class="blueprint-copper" d="m76 132 154-94 154 94M197 243v-76h66v76M207 179h46v64"/>
+        <path class="blueprint-line" d="M137 156h37v44h-37zm147 0h38v44h-38zM155 156v44M137 178h37M303 156v44M284 178h38M303 95V64h28v48"/>
+        <path class="blueprint-muted" d="M92 139v116m276-116v116M92 250h276M88 246l8 8m268-8 8 8M65 137v106m-4-106 8 0m-8 106h8M197 258h66"/>
+        <circle class="blueprint-node" cx="230" cy="38" r="5"/><circle class="blueprint-node" cx="76" cy="132" r="4"/><circle class="blueprint-node" cx="384" cy="132" r="4"/>
+      </svg>
+      <div class="drawing-footer"><span><i></i> PROPERTY POTENTIAL</span><span>K / 01</span></div>
+    </div>
+  </section>
+
+  <nav class="workflow" aria-label="Analysis progress">
+    <div id="stepScan" class="workflow-step is-current"><span>01</span><b>Find a property</b><i>Scan an address</i></div>
+    <div id="stepBudget" class="workflow-step"><span>02</span><b>Set your Hipshot</b><i>Your rehab estimate</i></div>
+    <div id="stepReview" class="workflow-step"><span>03</span><b>See the upside</b><i>Profit &amp; offer ceiling</i></div>
+  </nav>
 
   <div class="search-panel">
-    <label class="search-label" for="addressInput">Property Address</label>
+    <div class="panel-heading"><span class="section-kicker">Start your analysis</span><span class="small-note">One property. All the essentials.</span></div>
+    <label class="search-label" for="addressInput">Property address</label>
     <div class="search-row">
       <div class="address-autocomplete-wrap" id="autocompleteMount" aria-label="Address suggestions"></div>
       <input type="text" id="addressInput" value="" aria-label="Property address" placeholder="Street, city, state ZIP" onkeydown="if(event.key==='Enter') runScan()">
-      <button class="scan-btn" id="scanBtn" onclick="runScan()">Scan</button>
+      <button class="scan-btn" id="scanBtn" aria-label="Scan" onclick="runScan()">Scan</button>
     </div>
     <button id="addressModeBtn" class="address-mode-btn" onclick="toggleAddressEntry()" hidden>Enter address manually</button>
     <div class="status-line" id="statusLine" role="status"></div>
-    <button id="fsboManualBtn" onclick="showFSBOForm()" style="display:none; margin-top:10px; width:100%; padding:9px 14px; background:transparent; border:1px dashed var(--copper); border-radius:7px; color:var(--copper-bright); font-family:var(--mono); font-size:12px; letter-spacing:0.5px; cursor:pointer; text-align:left;">
-      ✎ &nbsp;Enter price manually — FSBO / off-market
-    </button>
+    <button id="fsboManualBtn" class="manual-price-btn" onclick="showFSBOForm()" style="display:none;">✎ &nbsp; Enter price manually · FSBO / off-market</button>
   </div>
 
   <div id="resultsWrap"></div>
 
   <div class="empty-state" id="emptyState">
-    <div class="glyph">⌂</div>
-    <p>Scan a property and enter your Hipshot rehab budget to calculate profit and your maximum offer.</p>
+    <div class="empty-symbol" aria-hidden="true">↗</div>
+    <div><div class="section-kicker">Ready when you are</div><h2>Your next deal starts here.</h2><p>Scan an address above. We’ll bring the property details.<br> You bring the vision.</p></div>
+    <div class="empty-outline" aria-hidden="true"><span>PROPERTY VALUE <b>—</b></span><span>YOUR HIPSHOT <b>—</b></span><span>THE UPSIDE <b>—</b></span></div>
   </div>
+  </main>
+  <footer class="site-footer"><span class="footer-brand">KYTALYST <i>by TDX Systems &amp; Consulting</i></span><span>Better numbers. Clearer decisions.</span></footer>
 
 <script src="rehab-budget.js?v=hipshot-save-1"></script>
 <script>
@@ -415,25 +212,55 @@ function refreshDealMetrics(){
   document.getElementById('metricMao').textContent = deal ? money(deal.mao) : '—';
   document.getElementById('metricPrice').textContent = money(lastScanData.listPrice);
   document.getElementById('metricArv').textContent = lastScanData.arv > 0 ? money(lastScanData.arv) : 'Enter ARV';
+  updateDealVisuals(deal, range);
 }
+function updateDealVisuals(deal, range){
+  const ready = !!deal;
+  document.getElementById('stepScan').className = 'workflow-step is-complete';
+  document.getElementById('stepBudget').className = 'workflow-step ' + (ready ? 'is-complete' : 'is-current');
+  document.getElementById('stepReview').className = 'workflow-step ' + (ready ? 'is-current' : '');
+  document.getElementById('saveHipshotBtn').classList.toggle('is-saved', hipshotSaved);
+  const target = document.getElementById('profitTarget');
+  const fill = document.getElementById('targetFill');
+  const allocation = document.getElementById('dealAllocation');
+  if (!ready) {
+    target.textContent = hipshotSaved ? 'Enter price and ARV to complete your analysis.' : 'Save your Hipshot to see the numbers.';
+    fill.style.width = '0%';
+    allocation.innerHTML = '<p class="budget-note">Save a Hipshot to reveal your cost breakdown.</p>';
+    return;
+  }
+  const difference = deal.projectedProfit - 20000;
+  target.textContent = difference >= 0 ? money(difference) + ' above your $20,000 target' : money(-difference) + ' below your $20,000 target';
+  fill.style.width = Math.max(0, Math.min(100, deal.projectedProfit / 20000 * 100)) + '%';
+  const parts = [
+    {name:'Purchase + closing',value:lastScanData.listPrice * 1.035,kind:'purchase'},
+    {name:'Hipshot rehab',value:range.amount,kind:'rehab'},
+    {name:'Resale deductions',value:lastScanData.arv * 0.1025,kind:'selling'},
+    {name:deal.projectedProfit >= 0 ? 'Projected profit' : 'Projected loss',value:deal.projectedProfit,kind:deal.projectedProfit >= 0 ? 'profit' : 'loss'}
+  ];
+  const total = parts.reduce((sum,p) => sum + Math.max(0,p.value),0);
+  allocation.innerHTML = '<div class="allocation-bar" aria-hidden="true">' + parts.filter(p=>p.value>0).map(p=>`<span class="allocation-${p.kind}" style="width:${p.value / total * 100}%"></span>`).join('') + '</div>' +
+    '<div class="allocation-legend">' + parts.map(p=>`<div><span><i class="allocation-${p.kind}"></i>${p.name}</span><strong>${money(p.value)}</strong></div>`).join('') + '</div>';
+}
+
 function renderBudget(){
   return `
-    <div class="section">
-      <div class="section-head">Hipshot</div>
+    <section class="section hipshot-section">
+      <div class="section-head"><span><i class="section-number">02</i> Your Hipshot</span><span class="section-tag">You know the work.</span></div>
       <div class="walkthrough-box">
         <label class="budget-field">Your rehab budget ($)
           <input id="hipshotInput" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 30000" value="${escapeHtml(hipshotAmount)}" oninput="updateHipshot(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();saveHipshot();}">
         </label>
-        <button type="button" id="saveHipshotBtn" class="budget-btn" style="margin-top:12px;" onclick="saveHipshot()">Save Hipshot</button>
+        <button type="button" id="saveHipshotBtn" aria-label="Save Hipshot" class="budget-btn save-hipshot" onclick="saveHipshot()">Save Hipshot</button>
         <div class="hipshot-range" aria-live="polite">
-          <div><span>−10%</span><strong id="hipshotLow">—</strong></div>
-          <div><span>+10%</span><strong id="hipshotHigh">—</strong></div>
+          <div><span>Lower range <b>−10%</b></span><strong id="hipshotLow">—</strong></div>
+          <div><span>Upper range <b>+10%</b></span><strong id="hipshotHigh">—</strong></div>
         </div>
-        <p class="budget-note">Save your budget to update profit and max offer.</p>
+        <p class="budget-note">Your best rehab estimate, with room on either side.</p>
         <div id="budgetError" class="budget-error" role="alert"></div>
         <p id="budgetStorage" class="budget-note" role="status"></p>
       </div>
-    </div>`;
+    </section>`;
 }
 
 // --- Google Places Autocomplete (frontend-only; does not touch kytalystScan or RentCast calls) ---
@@ -566,6 +393,11 @@ async function runScan(){
   const btn = document.getElementById('scanBtn');
   const statusLine = document.getElementById('statusLine');
   btn.disabled = true;
+  btn.classList.add('is-loading');
+  document.body.classList.add('is-scanning');
+  document.getElementById('stepScan').className = 'workflow-step is-current';
+  document.getElementById('stepBudget').className = 'workflow-step';
+  document.getElementById('stepReview').className = 'workflow-step';
   statusLine.textContent = "Pulling property data + comps…";
   document.getElementById('resultsWrap').innerHTML = "";
   document.getElementById('emptyState').style.display = "none";
@@ -585,6 +417,8 @@ async function runScan(){
       lastScanData = data;
       showFSBOForm(address);
       btn.disabled = false;
+      btn.classList.remove('is-loading');
+      document.body.classList.remove('is-scanning');
       return;
     }
   }catch(err){
@@ -592,11 +426,15 @@ async function runScan(){
     statusLine.textContent = 'Scan failed: ' + err.message + '. No sample data is used. Try again.';
     lastScanData = null;
     btn.disabled = false;
+    btn.classList.remove('is-loading');
+    document.body.classList.remove('is-scanning');
     return;
   }
 
   statusLine.textContent = "";
   btn.disabled = false;
+  btn.classList.remove('is-loading');
+  document.body.classList.remove('is-scanning');
 
   lastScanData = data;
   // After a live scan succeeds, show the manual override button
@@ -608,23 +446,24 @@ async function runScan(){
 function renderResults(){
   const data = lastScanData;
   if (!data) return;
+  document.body.classList.add('has-results');
 
   const fsboBadge = data._isFSBO
     ? `<div style="margin-top:6px; display:inline-block; padding:3px 10px; background:rgba(181,101,47,0.18); border:1px solid var(--copper); border-radius:5px; font-family:var(--mono); font-size:10px; letter-spacing:0.8px; color:var(--copper-bright);">FSBO / OFF-MARKET</div>`
     : '';
 
   const analysisInputs = `
-    <div class="section">
-      <div class="section-head">Analysis inputs</div>
-      <p class="budget-note">RentCast value is a starting estimate of current value, not a verified after-repair value. Enter the ARV supported by your renovation scope and comps.</p>
+    <section class="section inputs-section">
+      <div class="section-head"><span><i class="section-number">01</i> Set the numbers</span><span class="section-tag">Your assumptions</span></div>
+      <p class="budget-note">Start with the asking price. Refine the ARV using your planned renovation and comparable properties.</p>
       <div class="budget-grid">
         <label>Purchase price ($)<input id="analysisPrice" type="number" min="1" step="0.01" value="${Number(data.listPrice) || 0}"></label>
         <label>Your ARV ($)<input id="analysisArv" type="number" min="1" step="0.01" value="${Number(data.arv) || 0}"></label>
       </div>
       <button class="budget-btn secondary" onclick="applyAnalysisInputs()">Update analysis inputs</button>
       <div id="analysisError" class="budget-error" role="alert"></div>
-      <p class="budget-note">Current assumptions: $20,000 target profit; acquisition closing costs 3.5% of purchase price; resale deductions 10.25% of ARV (existing model). Check financing, holding costs, commissions, and taxes for your deal.</p>
-    </div>`;
+      <details class="assumptions"><summary>Model assumptions &amp; valuation notes</summary><p>RentCast estimates current value, not verified after-repair value. This model uses a $20,000 profit target, 3.5% acquisition closing costs, and 10.25% resale deductions. Review financing, holding costs, commissions, and taxes for your deal.</p></details>
+    </section>`;
 
   const GKEY = "AIzaSyBBJGJy8fxsb5C63eCXQnq1MN14OX8D5-0";
   const svUrl = (addr, w=640, h=200) =>
@@ -632,30 +471,20 @@ function renderResults(){
 
   const wrap = document.getElementById('resultsWrap');
   wrap.innerHTML = `
-    <div id="verdictBanner" class="verdict-banner pending" style="padding:0; overflow:hidden; flex-direction:column;">
-      <div style="position:relative; width:100%; height:180px; overflow:hidden; border-radius:10px 10px 0 0;">
-        <img src="${svUrl(data.address)}" alt="Street view" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.style.display='none'">
-        <div style="position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.7));"></div>
-        <div style="position:absolute; bottom:12px; left:14px; right:14px; display:flex; justify-content:space-between; align-items:flex-end;">
-          <div>
-            <div id="verdictWord" class="verdict-word" style="margin:0;">HIPSHOT NEEDED</div>
-            <div class="verdict-sub" style="color:rgba(255,255,255,0.8);">${escapeHtml(data.address)}</div>
-            ${fsboBadge}
-            ${!data._isFSBO ? `<div class="status-badge ${data.listingStatus === 'Active' ? 'active' : 'inactive'}" style="margin-top:4px;">
-              ${data.listingStatus === 'Active' ? 'Active on Market' : escapeHtml(data.listingStatus)}
-            </div>` : ''}
-          </div>
-          <div class="verdict-profit" style="text-align:right; flex-shrink:0; margin-left:12px;">
-            <div class="num" id="projectedProfit">—</div>
-            <div class="lbl">Projected Profit</div>
-          </div>
+    <section id="verdictBanner" class="verdict-banner pending" aria-label="Deal overview">
+      <div class="property-summary">
+        <div class="section-kicker">Property / opportunity overview</div>
+        <h2 class="property-address">${escapeHtml(data.address)}</h2>
+        <div class="property-badges"><span id="verdictWord" class="verdict-word">HIPSHOT NEEDED</span>
+          ${fsboBadge}
+          ${!data._isFSBO ? `<span class="status-badge ${data.listingStatus === 'Active' ? 'active' : 'inactive'}">${data.listingStatus === 'Active' ? 'Active on Market' : escapeHtml(data.listingStatus)}</span>` : ''}
         </div>
       </div>
-    </div>
+      <div class="verdict-profit"><span class="profit-label">The projected upside</span><div class="num" id="projectedProfit" aria-live="polite">—</div><div class="profit-target" id="profitTarget">Save your Hipshot to see the numbers.</div><div class="target-track" aria-hidden="true"><span id="targetFill"></span></div></div>
+    </section>
 
-    ${analysisInputs}
-    <div class="metrics-grid">
-      <div class="metric-cell"><span class="lbl">${data._isFSBO ? 'Asking Price' : 'List Price'}</span><span class="val" id="metricPrice">${money(data.listPrice)}</span></div>
+    <div class="metrics-grid" aria-label="Property metrics">
+      <div class="metric-cell"><span class="lbl">${data._isFSBO ? 'Asking price' : 'Purchase price'}</span><span class="val" id="metricPrice">${money(data.listPrice)}</span></div>
       <div class="metric-cell"><span class="lbl">ARV</span><span class="val" id="metricArv">${money(data.arv)}</span></div>
       <div class="metric-cell"><span class="lbl">Rehab budget</span><span class="val" id="metricRehab">Draft</span></div>
       <div class="metric-cell"><span class="lbl">Max Offer (MAO)</span><span class="val" id="metricMao">—</span></div>
@@ -663,34 +492,37 @@ function renderResults(){
       <div class="metric-cell"><span class="lbl">Year Built</span><span class="val">${data.yearBuilt || "—"}</span></div>
     </div>
 
-    <div class="section">
-      <div class="section-head">Distress Signals · ${escapeHtml(data.rehabTier)} rehab tier</div>
-      <div class="chip-row">
-        ${(data.distressSignals && data.distressSignals.length) ? data.distressSignals.map(s => `<span class="chip">${escapeHtml(s)}</span>`).join('') : '<span class="chip">none detected</span>'}
-      </div>
-    </div>
+    <div class="analysis-grid">${analysisInputs}${renderBudget()}</div>
 
-    ${renderBudget()}
+    <section class="section allocation-section">
+      <div class="section-head"><span><i class="section-number">03</i> The deal, at a glance</span><span class="section-tag">Follow the money</span></div>
+      <div id="dealAllocation" class="allocation-content"><p class="budget-note">Save a Hipshot to reveal your cost breakdown.</p></div>
+    </section>
 
-    <div class="section">
-      <div class="section-head">RentCast valuation comparables</div>
+    <section class="section signals-section">
+      <div class="section-head"><span>Listing signals</span><span class="section-tag">${escapeHtml(data.rehabTier)} rehab tier</span></div>
+      <div class="chip-row">${(data.distressSignals && data.distressSignals.length) ? data.distressSignals.map(s => `<span class="chip">${escapeHtml(s)}</span>`).join('') : '<span class="chip neutral">No distress signals detected</span>'}</div>
+    </section>
+
+    <section class="section comps-section">
+      <div class="section-head"><span>Nearby perspective</span><span class="section-tag">RentCast comparables</span></div>
       <p class="budget-note">These are valuation comparables returned by RentCast; closed-sale status and renovated condition have not been independently verified.</p>
-      ${(data.comps && data.comps.length) ? data.comps.map(c => {
+      <div class="comps-grid">${(data.comps && data.comps.length) ? data.comps.map(c => {
         const details = [
           c.beds ? `${c.beds}bd` : null,
           c.baths ? `${c.baths}ba` : null,
           c.sqft ? `${c.sqft.toLocaleString()}sf` : null,
         ].filter(Boolean).join(' · ');
-        return `<div class="comp-row" style="display:flex; align-items:center; gap:10px; padding:10px 0;">
-          <img src="${svUrl(c.addr)}" alt="" style="width:72px; height:52px; object-fit:cover; border-radius:5px; flex-shrink:0; background:var(--card);" onerror="this.style.display='none'">
-          <div style="flex:1; min-width:0;">
-            <div class="comp-addr" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(c.addr)}</div>
+        return `<article class="comp-row">
+          <img src="${svUrl(c.addr)}" alt="" class="comp-photo" loading="lazy" onerror="this.style.display='none'">
+          <div class="comp-description">
+            <div class="comp-addr">${escapeHtml(c.addr)}</div>
             ${details ? `<div style="font-size:11px; color:var(--muted); margin-top:2px;">${details}</div>` : ''}
           </div>
-          <span class="comp-price" style="flex-shrink:0;">${money(c.price)}</span>
-        </div>`;
-      }).join('') : '<div class="comp-row"><span class="comp-addr">No comps returned</span></div>'}
-    </div>
+          <span class="comp-price">${money(c.price)}</span>
+        </article>`;
+      }).join('') : '<p class="budget-note">No comparables returned for this property.</p>'}</div>
+    </section>
 
     ${data.agentName ? `
     <div class="section">
