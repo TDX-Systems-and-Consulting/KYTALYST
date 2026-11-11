@@ -230,7 +230,13 @@
   button:focus-visible,input:focus-visible{outline:2px solid var(--copper-bright);outline-offset:3px;}
   .search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;}
   .search-row>*{min-width:0;}
-  .address-autocomplete-wrap{grid-column:1/-1;}
+  .address-autocomplete-wrap{grid-column:auto;}
+  [hidden]{display:none!important;}
+  .address-mode-btn{border:0;background:transparent;color:var(--muted);padding:8px 0;font:inherit;font-size:12px;cursor:pointer;}
+  .hipshot-range{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}
+  .hipshot-range>div{border:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0;}
+  .hipshot-range span{font-size:12px;color:var(--muted);}
+  .hipshot-range strong{font-family:var(--mono);font-size:16px;overflow-wrap:anywhere;}
   .address-autocomplete-wrap:empty{display:none;}
   @media(max-width:500px){.verdict-word{font-size:21px;}.verdict-sub{font-size:11px;}.verdict-profit .num{font-size:19px;}}
   @media(min-width:700px){.budget-item .budget-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
@@ -255,10 +261,11 @@
   <div class="search-panel">
     <label class="search-label" for="addressInput">Property Address</label>
     <div class="search-row">
-      <div class="address-autocomplete-wrap" id="autocompleteMount" aria-label="Optional address suggestions"></div>
+      <div class="address-autocomplete-wrap" id="autocompleteMount" aria-label="Address suggestions"></div>
       <input type="text" id="addressInput" value="" aria-label="Property address" placeholder="Street, city, state ZIP" onkeydown="if(event.key==='Enter') runScan()">
       <button class="scan-btn" id="scanBtn" onclick="runScan()">Scan</button>
     </div>
+    <button id="addressModeBtn" class="address-mode-btn" onclick="toggleAddressEntry()" hidden>Enter address manually</button>
     <div class="status-line" id="statusLine" role="status"></div>
     <button id="fsboManualBtn" onclick="showFSBOForm()" style="display:none; margin-top:10px; width:100%; padding:9px 14px; background:transparent; border:1px dashed var(--copper); border-radius:7px; color:var(--copper-bright); font-family:var(--mono); font-size:12px; letter-spacing:0.5px; cursor:pointer; text-align:left;">
       ✎ &nbsp;Enter price manually — FSBO / off-market
@@ -269,7 +276,7 @@
 
   <div class="empty-state" id="emptyState">
     <div class="glyph">⌂</div>
-    <p>Scan a property, build your rehab budget, then apply it to calculate profit and your maximum offer.</p>
+    <p>Scan a property and enter your Hipshot rehab budget to calculate profit and your maximum offer.</p>
   </div>
 
 <script src="rehab-budget.js"></script>
@@ -292,18 +299,10 @@ applyTheme(savedTheme);
 // Live KYTALYST backend — deployed 7/15/26
 const CLOUD_FUNCTION_URL = "https://us-central1-kytrac-72d91.cloudfunctions.net/kytalystScan";
 
-// --- Real JOBSpan (7 Pillars Contracting) catalog pricing — exported 7/14/26, 89 tier records, 16 trades ---
-// t=trade, p=package, d=description, tier=low/med/high, tl=tierLabel, c=totalCost (contractor cost, not customer price)
-const CATALOG = [{"t":"1100 Plumbing","p":"Faucet Replacement","d":"Bath or kitchen faucet swap with supply lines and shutoffs","tier":"low","tl":"Standard","c":274.82},{"t":"1100 Plumbing","p":"Faucet Replacement","d":"Bath or kitchen faucet swap with supply lines and shutoffs","tier":"med","tl":"Mid-Grade","c":353.84},{"t":"1100 Plumbing","p":"Faucet Replacement","d":"Bath or kitchen faucet swap with supply lines and shutoffs","tier":"high","tl":"Premium","c":381.83},{"t":"1100 Plumbing","p":"Toilet Replacement","d":"Full toilet swap with wax ring, supply line, and seat","tier":"low","tl":"Round Standard","c":224.95},{"t":"1100 Plumbing","p":"Toilet Replacement","d":"Full toilet swap with wax ring, supply line, and seat","tier":"med","tl":"Oblong Dual Flush","c":234.95},{"t":"1100 Plumbing","p":"Toilet Replacement","d":"Full toilet swap with wax ring, supply line, and seat","tier":"high","tl":"Oblong Power Flush","c":319.03},{"t":"1100 Plumbing","p":"Kitchen Sink Install","d":"Drop-in sink with strainer, P-trap, and labor","tier":"low","tl":"Single Bowl 25\"","c":384.45},{"t":"1100 Plumbing","p":"Kitchen Sink Install","d":"Drop-in sink with strainer, P-trap, and labor","tier":"med","tl":"Double Bowl 33\"","c":405.22},{"t":"1100 Plumbing","p":"Kitchen Sink Install","d":"Drop-in sink with strainer, P-trap, and labor","tier":"high","tl":"Pedestal Sink","c":389.2},{"t":"1100 Plumbing","p":"Shower/Tub Valve","d":"Tub or shower valve replacement with trim kit","tier":"low","tl":"Glacier Bay Aragon Chrome","c":249},{"t":"1100 Plumbing","p":"Shower/Tub Valve","d":"Tub or shower valve replacement with trim kit","tier":"med","tl":"Moen Adler Chrome","c":249},{"t":"1100 Plumbing","p":"Shower/Tub Valve","d":"Tub or shower valve replacement with trim kit","tier":"high","tl":"Banbury Trim Kit Matte Black","c":315.62},{"t":"1100 Plumbing","p":"Water Heater Replace","d":"Water heater swap with expansion tank","tier":"low","tl":"40 gal Electric","c":748.88},{"t":"1100 Plumbing","p":"Water Heater Replace","d":"Water heater swap with expansion tank","tier":"med","tl":"40 gal Natural Gas","c":1028.88},{"t":"1100 Plumbing","p":"Water Heater Replace","d":"Water heater swap with expansion tank","tier":"high","tl":"50 gal Natural Gas","c":1128.88},{"t":"1100 Plumbing","p":"Supply Line Rough-In (PEX)","d":"Per 10ft length \u2014 color-coded hot/cold PEX-B","tier":"low","tl":"Blue PEX (cold)","c":50.36},{"t":"1100 Plumbing","p":"Supply Line Rough-In (PEX)","d":"Per 10ft length \u2014 color-coded hot/cold PEX-B","tier":"high","tl":"Red PEX (hot)","c":50.36},{"t":"1100 Plumbing","p":"Shutoff Valve Install","d":"Per valve \u2014 SharkBite push-to-connect angle stop","tier":"low","tl":"SharkBite Quarter-Turn Angle Stop","c":63.45},{"t":"1000 Electrical","p":"Ceiling Fan Install","d":"Fan install at existing junction box","tier":"low","tl":"42\" Littleton White","c":144.97},{"t":"1000 Electrical","p":"Ceiling Fan Install","d":"Fan install at existing junction box","tier":"med","tl":"44\" Hampton Bay Bronze","c":174.97},{"t":"1000 Electrical","p":"Ceiling Fan Install","d":"Fan install at existing junction box","tier":"high","tl":"52\" Hampton Bay Menage","c":209},{"t":"1000 Electrical","p":"Flush Mount Light","d":"Swap flush mount light at existing box","tier":"low","tl":"11\" Brushed Nickel","c":72.47},{"t":"1000 Electrical","p":"Flush Mount Light","d":"Swap flush mount light at existing box","tier":"med","tl":"15\" Mid-Grade","c":89.99},{"t":"1000 Electrical","p":"Flush Mount Light","d":"Swap flush mount light at existing box","tier":"high","tl":"Sconce/Premium","c":75.97},{"t":"1000 Electrical","p":"Vanity Light Replace","d":"Bathroom vanity bar light swap","tier":"low","tl":"3-Light Raceway BN","c":64.97},{"t":"1000 Electrical","p":"Vanity Light Replace","d":"Bathroom vanity bar light swap","tier":"med","tl":"3-Light Oil Rubbed Bronze","c":129.97},{"t":"1000 Electrical","p":"Vanity Light Replace","d":"Bathroom vanity bar light swap","tier":"high","tl":"3-Light Regan BN","c":139.97},{"t":"1000 Electrical","p":"GFCI Outlet Install","d":"GFCI outlet install at existing box with wall plate","tier":"low","tl":"1 Outlet","c":44.46},{"t":"1000 Electrical","p":"GFCI Outlet Install","d":"GFCI outlet install at existing box with wall plate","tier":"med","tl":"2 Outlets","c":88.92},{"t":"1000 Electrical","p":"GFCI Outlet Install","d":"GFCI outlet install at existing box with wall plate","tier":"high","tl":"4 Outlets","c":177.84},{"t":"1000 Electrical","p":"Light Switch Install","d":"Toggle switch replacement with wall plate","tier":"low","tl":"1 Switch","c":31.43},{"t":"1000 Electrical","p":"Light Switch Install","d":"Toggle switch replacement with wall plate","tier":"med","tl":"3 Switches","c":94.29},{"t":"1000 Electrical","p":"Light Switch Install","d":"Toggle switch replacement with wall plate","tier":"high","tl":"6 Switches","c":188.58},{"t":"1000 Electrical","p":"Rough Wiring / Wire Pull","d":"Per linear ft \u2014 Romex wire pull, rough-in stage","tier":"low","tl":"14/2 Romex (15-amp circuits)","c":4.5},{"t":"1000 Electrical","p":"Rough Wiring / Wire Pull","d":"Per linear ft \u2014 Romex wire pull, rough-in stage","tier":"high","tl":"12/2 Romex (20-amp circuits)","c":4.5},{"t":"1000 Electrical","p":"Old Work Electrical Box Install","d":"Per box \u2014 retrofit outlet/switch box, rough-in stage","tier":"low","tl":"1-Gang PVC Old Work Box","c":52.18},{"t":"1700 Flooring","p":"LVP Flooring Install","d":"Luxury vinyl plank install per room, includes transition strip","tier":"low","tl":"LVP Aspen 4.5mm/12mil","c":1476.0},{"t":"1700 Flooring","p":"LVP Flooring Install","d":"Luxury vinyl plank install per room, includes transition strip","tier":"med","tl":"LVP Ash Gray 5mm/20mil","c":1516.0},{"t":"1700 Flooring","p":"LVP Flooring Install","d":"Luxury vinyl plank install per room, includes transition strip","tier":"high","tl":"LVP Ash Gray 6.5mm/24mil","c":1674.0},{"t":"1700 Flooring","p":"Carpet Remove & Replace","d":"Pull existing carpet, install new","tier":"low","tl":"Carpet Removal Only","c":400},{"t":"1700 Flooring","p":"Carpet Remove & Replace","d":"Pull existing carpet, install new","tier":"med","tl":"Remove + Replace","c":908.0},{"t":"1700 Flooring","p":"Carpet Remove & Replace","d":"Pull existing carpet, install new","tier":"high","tl":"Devon Oak LVP Alternative","c":1398.0},{"t":"2300 Painting","p":"Paint Exterior Door","d":"Interior and exterior of doors, includes prep","tier":"low","tl":"1 Door","c":15.3},{"t":"2300 Painting","p":"Paint Exterior Door","d":"Interior and exterior of doors, includes prep","tier":"med","tl":"2 Doors","c":30.6},{"t":"2300 Painting","p":"Paint Exterior Door","d":"Interior and exterior of doors, includes prep","tier":"high","tl":"4 Doors","c":61.2},{"t":"1900 Cabinetry","p":"Bathroom Vanity Install","d":"Vanity with top, mirror, and install labor","tier":"low","tl":"24.5\" Glacier Bay Freestanding","c":398.97},{"t":"1900 Cabinetry","p":"Bathroom Vanity Install","d":"Vanity with top, mirror, and install labor","tier":"med","tl":"31\" Vanity with Cultured Marble Top","c":448.97},{"t":"1900 Cabinetry","p":"Bathroom Vanity Install","d":"Vanity with top, mirror, and install labor","tier":"high","tl":"30\" Bannister Freestanding","c":588.97},{"t":"2000 Countertops","p":"Countertop Install","d":"Kitchen or bath countertop supply and install","tier":"low","tl":"Wilsonart 6ft Laminate","c":416.98},{"t":"2000 Countertops","p":"Countertop Install","d":"Kitchen or bath countertop supply and install","tier":"med","tl":"Hampton Bay 4ft Gray Laminate Kit","c":361.85},{"t":"2000 Countertops","p":"Countertop Install","d":"Kitchen or bath countertop supply and install","tier":"high","tl":"Stone per sqft","c":1775},{"t":"1400 Drywall","p":"Drywall Patch","d":"Hole or section repair, tape, mud, sand, prime","tier":"low","tl":"Small Patch (per sqft)","c":81.3},{"t":"1400 Drywall","p":"Drywall Patch","d":"Hole or section repair, tape, mud, sand, prime","tier":"med","tl":"1/2 Sheet","c":260.74},{"t":"1400 Drywall","p":"Drywall Patch","d":"Hole or section repair, tape, mud, sand, prime","tier":"high","tl":"Full Sheet 4x8","c":453.72},{"t":"2400 Appliances","p":"Range / Stove Install","d":"Freestanding range install, disconnect old unit","tier":"low","tl":"Electric Standard","c":869.96},{"t":"2400 Appliances","p":"Range / Stove Install","d":"Freestanding range install, disconnect old unit","tier":"med","tl":"Over Range Microwave","c":399},{"t":"2400 Appliances","p":"Range / Stove Install","d":"Freestanding range install, disconnect old unit","tier":"high","tl":"Dishwasher","c":800},{"t":"1500 Doors & Windows","p":"Interior Door Replace","d":"Interior door install, remove old, install new with hardware","tier":"low","tl":"30\" Hollow Core Slab","c":184.31},{"t":"1500 Doors & Windows","p":"Interior Door Replace","d":"Interior door install, remove old, install new with hardware","tier":"med","tl":"30\" Steves 6-Panel Primed","c":210.45},{"t":"1500 Doors & Windows","p":"Interior Door Replace","d":"Interior door install, remove old, install new with hardware","tier":"high","tl":"32\" Right-Hand Pre-Hung","c":326.45},{"t":"1500 Doors & Windows","p":"Deadbolt Install","d":"Deadbolt replacement on exterior door","tier":"low","tl":"1 Door","c":50.45},{"t":"1500 Doors & Windows","p":"Deadbolt Install","d":"Deadbolt replacement on exterior door","tier":"med","tl":"2 Doors","c":100.9},{"t":"1500 Doors & Windows","p":"Deadbolt Install","d":"Deadbolt replacement on exterior door","tier":"high","tl":"3 Doors","c":151.35},{"t":"1500 Doors & Windows","p":"Mini Blind Install","d":"Window blind install per window","tier":"low","tl":"1 Window","c":76.48},{"t":"1500 Doors & Windows","p":"Mini Blind Install","d":"Window blind install per window","tier":"med","tl":"3 Windows","c":229.44},{"t":"1500 Doors & Windows","p":"Mini Blind Install","d":"Window blind install per window","tier":"high","tl":"6 Windows","c":458.88},{"t":"0200 Demolition","p":"Demo / Trash Out","d":"Demo labor and debris removal","tier":"low","tl":"Half Day 1-Man","c":400},{"t":"0200 Demolition","p":"Demo / Trash Out","d":"Demo labor and debris removal","tier":"med","tl":"Full Day 1-Man","c":800},{"t":"0200 Demolition","p":"Demo / Trash Out","d":"Demo labor and debris removal","tier":"high","tl":"Full Day + Dumpster","c":800},{"t":"2800 Concrete","p":"Concrete Replacement","d":"Per sqft \u2014 all-in rate, driveway/patio/sidewalk","tier":"low","tl":"Standard Replacement","c":12},{"t":"2800 Concrete","p":"Concrete Patch Repair","d":"Spot repair \u2014 spalling, cracks, minor damage","tier":"low","tl":"Sika Textured Concrete Patch","c":232.62},{"t":"2500 Decking","p":"Deck Board Replace","d":"Replace deck boards per board (16 ft. length)","tier":"low","tl":"Pressure-Treated Pine","c":62.48},{"t":"2500 Decking","p":"Deck Board Replace","d":"Replace deck boards per board (16 ft. length)","tier":"high","tl":"Composite (NewTechWood)","c":141.26},{"t":"2500 Decking","p":"Composite Railing Install","d":"Composite railing kit, per 6 ft. section","tier":"low","tl":"6 ft. Railing Kit","c":444},{"t":"0600 Framing","p":"Wall Stud Framing","d":"Per stud \u2014 2x4 wall framing","tier":"low","tl":"2x4 Stud","c":83.46},{"t":"0600 Framing","p":"OSB Subfloor/Sheathing Install","d":"Per 4x8 sheet \u2014 subfloor or wall sheathing","tier":"low","tl":"1/2 in. OSB Sheet","c":50.58},{"t":"0600 Framing","p":"Joist Hanger Install","d":"Per hanger \u2014 2x8 nominal lumber","tier":"low","tl":"Simpson Strong-Tie LUS (2x8)","c":17.39},{"t":"1300 Insulation","p":"Blown-In Attic Insulation","d":"Per sqft \u2014 cellulose blown-in, all-in rate","tier":"low","tl":"Cellulose Blown-In","c":1.9},{"t":"1300 Insulation","p":"Batt Insulation (R-15)","d":"Per sqft \u2014 wall/ceiling batt insulation","tier":"low","tl":"Standard Unfaced Batt","c":0.5},{"t":"1300 Insulation","p":"Batt Insulation (R-15)","d":"Per sqft \u2014 wall/ceiling batt insulation","tier":"high","tl":"Fire & Sound Guard Batt","c":0.57},{"t":"1300 Insulation","p":"Attic Insulation Roll (R-30)","d":"Per sqft \u2014 unfaced fiberglass roll, attic-grade","tier":"low","tl":"Owens Corning R-30 Pink","c":1.85},{"t":"1200 Mechanical","p":"Programmable Thermostat Install","d":"Thermostat swap with install labor","tier":"low","tl":"1-Week Programmable","c":79.98},{"t":"1200 Mechanical","p":"Wall/Ceiling Supply Register Install","d":"Per register \u2014 2-way wall or ceiling supply","tier":"low","tl":"12in x 6in 2-Way Register","c":39.87},{"t":"1200 Mechanical","p":"Return Air Grille Install","d":"Per grille \u2014 wall-mounted return air","tier":"low","tl":"30in x 10in White Return Grille","c":45},{"t":"1200 Mechanical","p":"Floor Register/Diffuser Install","d":"Per register \u2014 floor-mounted supply","tier":"low","tl":"4in x 10in White Floor Diffuser","c":22.97},{"t":"1200 Mechanical","p":"Floor Register/Diffuser Install","d":"Per register \u2014 floor-mounted supply","tier":"high","tl":"4in x 10in Brown Steel Register","c":22.97},{"t":"1200 Mechanical","p":"AC Security Cage Install","d":"Cage + real install service, per unit","tier":"low","tl":"Reinforced Steel AC Cage","c":730.99},{"t":"1200 Mechanical","p":"Full HVAC System Replacement","d":"AC & furnace, complete install \u2014 real all-in flat rate","tier":"low","tl":"Install New AC & Furnace","c":5775},{"t":"1200 Mechanical","p":"HVAC Clean & Check (Service)","d":"Maintenance service call \u2014 real all-in flat rate","tier":"low","tl":"JC's AC Clean & Check","c":125}];
-
 let lastScanData = null;
-let walkthroughItems = [];
-let contingencyPercent = 10;
-let budgetApplied = false;
+let hipshotAmount = '';
 let budgetStorageMessage = '';
-let editingItemIndex = null;
-let currentSearchMatches = [];
-let selectedCatalogItem = null;
+let autocompleteElement = null;
 
 function escapeHtml(value){
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -311,154 +310,57 @@ function escapeHtml(value){
 function formatCost(value){
   return Number(value).toLocaleString('en-US', {style:'currency', currency:'USD'});
 }
-function budgetError(message){
-  document.getElementById('budgetError').textContent = message;
-}
 function saveBudget(){
   try {
-    localStorage.setItem(RehabBudget.key(lastScanData.address), JSON.stringify({
-      version:1, items:walkthroughItems, contingencyPercent, applied:budgetApplied
-    }));
-    budgetStorageMessage = 'Saved on this browser for this property.';
+    localStorage.setItem(RehabBudget.key(lastScanData.address), JSON.stringify({version:2, amount:hipshotAmount}));
+    budgetStorageMessage = 'Saved for this property on this browser.';
   } catch (_) {
-    budgetStorageMessage = 'Browser storage unavailable. Keep this page open to retain your budget.';
+    budgetStorageMessage = 'Keep this page open; browser storage is unavailable.';
   }
 }
 function loadBudget(address){
-  walkthroughItems = [];
-  contingencyPercent = 10;
-  budgetApplied = false;
-  editingItemIndex = null;
-  selectedCatalogItem = null;
-  budgetStorageMessage = 'Budgets save on this browser for each property.';
+  hipshotAmount = '';
+  budgetStorageMessage = '';
   try {
     const saved = localStorage.getItem(RehabBudget.key(address));
     if (saved) {
-      const budget = RehabBudget.restore(JSON.parse(saved));
-      walkthroughItems = budget.items;
-      contingencyPercent = budget.contingencyPercent;
-      budgetApplied = budget.applied;
-      budgetStorageMessage = 'Restored this property’s budget from this browser.';
+      hipshotAmount = RehabBudget.restore(JSON.parse(saved)).amount;
+      budgetStorageMessage = 'Restored for this property.';
     }
   } catch (_) {
-    budgetStorageMessage = 'Saved budget could not be loaded. Start a new budget below.';
+    budgetStorageMessage = 'Saved estimate unavailable. Enter your Hipshot below.';
   }
 }
-function filterCatalogSearch(){
-  const q = document.getElementById('wtSearch').value.toLowerCase().trim();
-  selectedCatalogItem = null;
-  const resultsEl = document.getElementById('wtSearchResults');
-  if (!q) { resultsEl.innerHTML = ''; return; }
-  currentSearchMatches = CATALOG.filter(r =>
-    (r.p + ' ' + r.t + ' ' + r.tl + ' ' + (r.d || '')).toLowerCase().includes(q)
-  ).slice(0,8);
-  resultsEl.innerHTML = currentSearchMatches.length ? currentSearchMatches.map((r,i) => `
-    <button type="button" class="wt-search-row" style="width:100%;background:transparent;text-align:left;" onclick="selectCatalogItem(${i})">
-      <span><span class="wt-search-main">${escapeHtml(r.p)} — ${escapeHtml(r.tl)}</span><br>
-      <span class="wt-search-sub">${escapeHtml(r.d)} · ${escapeHtml(r.t)}</span></span>
-      <span class="wt-search-price">${formatCost(r.c)}</span>
-    </button>`).join('') : '<p class="budget-note">No match. Add your own item below.</p>';
-}
-function selectCatalogItem(i){
-  selectedCatalogItem = currentSearchMatches[i];
-  editingItemIndex = null;
-  const r = selectedCatalogItem;
-  document.getElementById('itemDescription').value = `${r.p} — ${r.tl}`;
-  document.getElementById('itemTrade').value = r.t;
-  document.getElementById('itemUnit').value = 'package';
-  document.getElementById('itemQty').value = 1;
-  document.getElementById('itemMaterial').value = 0;
-  document.getElementById('itemLabor').value = 0;
-  document.getElementById('itemOther').value = r.c;
-  document.getElementById('wtSearchResults').innerHTML = '';
-  document.getElementById('itemSaveBtn').textContent = 'Add item';
-  document.getElementById('itemSourceNote').textContent = 'JOBSpan combined cost is in Other / bundled. Adjust it or replace it with your material and labor breakdown.';
-  document.getElementById('itemDescription').focus();
-}
-function saveRehabItem(){
-  try {
-    const item = RehabBudget.item({
-      description:document.getElementById('itemDescription').value,
-      trade:document.getElementById('itemTrade').value,
-      unit:document.getElementById('itemUnit').value,
-      qty:document.getElementById('itemQty').value,
-      material:document.getElementById('itemMaterial').value,
-      labor:document.getElementById('itemLabor').value,
-      other:document.getElementById('itemOther').value,
-      source:selectedCatalogItem ? 'JOBSpan' : (editingItemIndex !== null ? walkthroughItems[editingItemIndex].source : 'Manual')
-    });
-    // Validate the whole proposed budget before mutating the current one.
-    const next = walkthroughItems.slice();
-    if (editingItemIndex === null) next.push(item); else next[editingItemIndex] = item;
-    RehabBudget.calculate(next, contingencyPercent);
-    walkthroughItems = next;
-    budgetApplied = false;
-    editingItemIndex = null;
-    selectedCatalogItem = null;
-    saveBudget();
-    renderResults();
-    document.getElementById('itemDescription').focus();
-  } catch(err){ budgetError(err.message); }
-}
-function editRehabItem(i){
-  editingItemIndex = i;
-  selectedCatalogItem = null;
-  const it = walkthroughItems[i];
-  for (const field of ['Description','Trade','Unit','Qty','Material','Labor','Other']) {
-    document.getElementById('item'+field).value = it[field.toLowerCase()];
-  }
-  document.getElementById('itemSaveBtn').textContent = 'Save changes';
-  document.getElementById('itemSourceNote').textContent = 'Editing an existing item. Save changes or cancel before applying the budget.';
-  budgetError('');
-  document.getElementById('itemDescription').focus();
-}
-function cancelRehabItem(){
-  editingItemIndex = null;
-  selectedCatalogItem = null;
-  renderResults();
-}
-function removeRehabItem(i){
-  walkthroughItems.splice(i,1);
-  budgetApplied = false;
-  editingItemIndex = null;
-  selectedCatalogItem = null;
-  saveBudget();
-  renderResults();
-}
-function changeContingency(input){
-  try {
-    const next = RehabBudget.calculate(walkthroughItems, input.value);
-    contingencyPercent = next.contingencyPercent;
-    budgetApplied = false;
-    saveBudget();
-    // Preserve unsaved line-item fields while refreshing calculations.
-    refreshBudgetSummary();
-    refreshDealMetrics();
-    budgetError('');
-  } catch(err) {
-    input.value = contingencyPercent;
-    budgetError(err.message);
-  }
-}
-function applyRehabBudget(){
-  if (!walkthroughItems.length) { budgetError('Add at least one rehab item. For no work, add an explicit $0 item.'); return; }
-  if (document.getElementById('itemDescription').value.trim() || selectedCatalogItem || editingItemIndex !== null) {
-    budgetError('Save or cancel the item in the editor before applying the budget.'); return;
-  }
-  budgetApplied = true;
+function updateHipshot(input){
+  // Clear the old estimate immediately when the field is empty or invalid.
+  hipshotAmount = input.value;
   saveBudget();
   refreshBudgetSummary();
   refreshDealMetrics();
-  budgetError('');
 }
 function refreshBudgetSummary(){
-  const b = RehabBudget.calculate(walkthroughItems, contingencyPercent);
-  document.getElementById('budgetSubtotal').textContent = formatCost(b.subtotal);
-  document.getElementById('budgetContingency').textContent = formatCost(b.contingency);
-  document.getElementById('budgetTotal').textContent = formatCost(b.total);
-  document.getElementById('budgetState').textContent = budgetApplied ? 'Applied to analysis. Changes return the budget to draft.' : 'Draft — profit and maximum offer appear after you apply your complete budget.';
+  let range = null;
+  try { range = RehabBudget.hipshot(hipshotAmount); } catch (_) {}
+  document.getElementById('hipshotLow').textContent = range ? formatCost(range.low) : '—';
+  document.getElementById('hipshotHigh').textContent = range ? formatCost(range.high) : '—';
+  document.getElementById('budgetError').textContent = hipshotAmount !== '' && !range ? 'Enter a rehab budget of zero or greater.' : '';
   document.getElementById('budgetStorage').textContent = budgetStorageMessage;
 }
+function toggleAddressEntry(){
+  if (!autocompleteElement) return;
+  const input = document.getElementById('addressInput');
+  const mount = document.getElementById('autocompleteMount');
+  const useManual = input.hidden;
+  input.hidden = !useManual;
+  mount.hidden = useManual;
+  document.getElementById('addressModeBtn').textContent = useManual ? 'Use address suggestions' : 'Enter address manually';
+  if (useManual) input.focus();
+  else {
+    input.value = typeof autocompleteElement.value === 'string' ? autocompleteElement.value : '';
+    autocompleteElement.focus();
+  }
+}
+
 function applyAnalysisInputs(){
   try {
     const listPrice = document.getElementById('analysisPrice').value;
@@ -471,65 +373,34 @@ function applyAnalysisInputs(){
   } catch(err){ document.getElementById('analysisError').textContent = err.message; }
 }
 function refreshDealMetrics(){
-  const b = RehabBudget.calculate(walkthroughItems, contingencyPercent);
+  let range = null;
   let deal = null;
-  if (budgetApplied) {
-    try { deal = RehabBudget.evaluate({listPrice:lastScanData.listPrice,arv:lastScanData.arv,rehabTotal:b.total}); }
-    catch (_) {} // Missing valuation requires a manual ARV before a verdict.
-  }
+  try {
+    range = RehabBudget.hipshot(hipshotAmount);
+    deal = RehabBudget.evaluate({listPrice:lastScanData.listPrice,arv:lastScanData.arv,rehabTotal:range.amount});
+  } catch (_) {}
   document.getElementById('verdictBanner').className = 'verdict-banner ' + (deal ? (deal.isDeal ? 'deal' : 'nodeal') : 'pending');
-  document.getElementById('verdictWord').textContent = deal ? (deal.isDeal ? 'DEAL' : 'NO DEAL') : (budgetApplied ? 'ENTER PRICE / ARV' : 'BUDGET NEEDED');
+  document.getElementById('verdictWord').textContent = deal ? (deal.isDeal ? 'DEAL' : 'NO DEAL') : (range ? 'ENTER PRICE / ARV' : 'HIPSHOT NEEDED');
   document.getElementById('projectedProfit').textContent = deal ? money(deal.projectedProfit) : '—';
-  document.getElementById('metricRehab').textContent = budgetApplied ? formatCost(b.total) : 'Draft';
+  document.getElementById('metricRehab').textContent = range ? formatCost(range.amount) : 'Enter Hipshot';
   document.getElementById('metricMao').textContent = deal ? money(deal.mao) : '—';
   document.getElementById('metricPrice').textContent = money(lastScanData.listPrice);
   document.getElementById('metricArv').textContent = lastScanData.arv > 0 ? money(lastScanData.arv) : 'Enter ARV';
 }
 function renderBudget(){
-  const b = RehabBudget.calculate(walkthroughItems, contingencyPercent);
   return `
     <div class="section">
-      <div class="section-head">Build your rehab budget</div>
+      <div class="section-head">Hipshot</div>
       <div class="walkthrough-box">
-        <p class="budget-note">Enter the work you expect to perform. Costs are per unit; quantity multiplies material + labor + other. No age or square-footage formula is used.</p>
-        <label class="budget-field">Optional JOBSpan starting point
-          <input type="text" id="wtSearch" placeholder="Search faucet, HVAC, drywall…" oninput="filterCatalogSearch()" autocomplete="off">
+        <label class="budget-field">Your rehab budget ($)
+          <input id="hipshotInput" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 30000" value="${escapeHtml(hipshotAmount)}" oninput="updateHipshot(this)">
         </label>
-        <div class="wt-search-results" id="wtSearchResults"></div>
-        <p class="budget-note">Catalog prices are combined package costs from the July 2026 export. Check the package scope and quantity; every cost is editable.</p>
-        <div class="budget-grid">
-          <label class="budget-wide">Work description<input id="itemDescription" placeholder="Roof replacement, permit, dumpster…" maxlength="300"></label>
-          <label>Trade / category<input id="itemTrade" value="General" maxlength="100"></label>
-          <label>Unit<input id="itemUnit" value="each" placeholder="sq ft, hour, allowance" maxlength="40"></label>
-          <label>Quantity<input id="itemQty" type="number" min="0.001" step="any" value="1"></label>
-          <label>Material per unit ($)<input id="itemMaterial" type="number" min="0" step="0.01" value="0"></label>
-          <label>Labor per unit ($)<input id="itemLabor" type="number" min="0" step="0.01" value="0"></label>
-          <label>Other / bundled per unit ($)<input id="itemOther" type="number" min="0" step="0.01" value="0"></label>
+        <div class="hipshot-range" aria-live="polite">
+          <div><span>−10%</span><strong id="hipshotLow">—</strong></div>
+          <div><span>+10%</span><strong id="hipshotHigh">—</strong></div>
         </div>
-        <p id="itemSourceNote" class="budget-note">For a subcontractor quote or allowance, enter quantity 1 and put the whole amount in Other / bundled.</p>
-        <div class="budget-actions">
-          <button class="budget-btn" id="itemSaveBtn" onclick="saveRehabItem()">Add item</button>
-          <button class="budget-btn secondary" onclick="cancelRehabItem()">Cancel item</button>
-        </div>
+        <p class="budget-note">Profit and max offer use your entered budget.</p>
         <div id="budgetError" class="budget-error" role="alert"></div>
-        ${b.lines.length ? b.lines.map((it,i) => `
-          <div class="budget-item">
-            <div class="budget-item-head"><strong>${escapeHtml(it.description)}</strong><strong>${formatCost(it.total)}</strong></div>
-            <p class="budget-note">${escapeHtml(it.trade)} · ${it.qty} ${escapeHtml(it.unit)} · ${escapeHtml(it.source)}<br>
-              Per unit: material ${formatCost(it.material)} + labor ${formatCost(it.labor)} + other / bundled ${formatCost(it.other)}</p>
-            <div class="budget-actions"><button class="budget-btn secondary" onclick="editRehabItem(${i})" aria-label="Edit ${escapeHtml(it.description)}">Edit</button>
-              <button class="budget-btn secondary" onclick="removeRehabItem(${i})" aria-label="Remove ${escapeHtml(it.description)}">Remove</button></div>
-          </div>`).join('') : '<p class="budget-note">No rehab items yet. Build your scope above, including work outside the JOBSpan catalog.</p>'}
-        <label class="budget-field" style="max-width:220px;margin-top:16px;">Contingency (%)
-          <input type="number" id="contingencyInput" min="0" max="100" step="0.1" value="${contingencyPercent}" onchange="changeContingency(this)">
-        </label>
-        <div class="budget-summary">
-          <div><span>Line-item subtotal</span><b id="budgetSubtotal">${formatCost(b.subtotal)}</b></div>
-          <div><span>Contingency</span><b id="budgetContingency">${formatCost(b.contingency)}</b></div>
-          <div class="total"><span>Total rehab budget</span><b id="budgetTotal">${formatCost(b.total)}</b></div>
-        </div>
-        <p id="budgetState" class="budget-status" aria-live="polite"></p>
-        <button class="budget-btn" onclick="applyRehabBudget()">Apply rehab budget</button>
         <p id="budgetStorage" class="budget-note"></p>
       </div>
     </div>`;
@@ -544,19 +415,22 @@ function renderBudget(){
       includedRegionCodes: ["us"],
       includedPrimaryTypes: ["street_address", "premise", "subpremise"]
     });
-    autocompleteEl.placeholder = "Optional address suggestions…";
+    autocompleteEl.placeholder = "Property address…";
+    autocompleteEl.setAttribute('aria-label', 'Property address suggestions');
     document.getElementById('autocompleteMount').appendChild(autocompleteEl);
-    // The plain address field remains available when Maps is unavailable.
-    autocompleteEl.style.marginBottom = '8px';
+    autocompleteElement = autocompleteEl;
 
     const hiddenInput = document.getElementById('addressInput');
+    const manualMode = !!hiddenInput.value;
+    hiddenInput.hidden = !manualMode;
+    document.getElementById('autocompleteMount').hidden = manualMode;
+    document.getElementById('addressModeBtn').hidden = false;
+    document.getElementById('addressModeBtn').textContent = manualMode ? 'Use address suggestions' : 'Enter address manually';
 
     // Fallback: if the user types a full address but never picks a dropdown suggestion,
     // keep the hidden field in sync with their raw typed text so Scan still works.
     autocompleteEl.addEventListener('input', () => {
-      if (typeof autocompleteEl.value === 'string') {
-        hiddenInput.value = autocompleteEl.value;
-      }
+      hiddenInput.value = typeof autocompleteEl.value === 'string' ? autocompleteEl.value : '';
     });
 
     // On selection: parse into clean, structured "Street, City, State, Zip" — what RentCast expects.
@@ -655,7 +529,10 @@ async function fetchRealScan(address){
 
 async function runScan(){
   const address = document.getElementById('addressInput').value.trim();
-  if(!address) return;
+  if(!address) {
+    document.getElementById('statusLine').textContent = 'Enter an address or choose one from the suggestions.';
+    return;
+  }
   const btn = document.getElementById('scanBtn');
   const statusLine = document.getElementById('statusLine');
   btn.disabled = true;
@@ -731,7 +608,7 @@ function renderResults(){
         <div style="position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.7));"></div>
         <div style="position:absolute; bottom:12px; left:14px; right:14px; display:flex; justify-content:space-between; align-items:flex-end;">
           <div>
-            <div id="verdictWord" class="verdict-word" style="margin:0;">BUDGET / ARV NEEDED</div>
+            <div id="verdictWord" class="verdict-word" style="margin:0;">HIPSHOT NEEDED</div>
             <div class="verdict-sub" style="color:rgba(255,255,255,0.8);">${escapeHtml(data.address)}</div>
             ${fsboBadge}
             ${!data._isFSBO ? `<div class="status-badge ${data.listingStatus === 'Active' ? 'active' : 'inactive'}" style="margin-top:4px;">

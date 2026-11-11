@@ -42,92 +42,84 @@ const server = http.createServer((req,res) => {
       await page.locator('#addressInput').fill(address);
       await page.getByRole('button',{name:'Scan',exact:true}).click();
     };
-    const add = async ({description='Roof replacement',qty='1',material='6000',labor='4000',other='0'}={}) => {
-      for(const [field,value] of Object.entries({Description:description,Qty:qty,Material:material,Labor:labor,Other:other})) {
-        await page.locator('#item'+field).fill(value);
-      }
-      await page.getByRole('button',{name:'Add item',exact:true}).click();
-    };
     const text = sel => page.locator(sel).innerText();
     await page.goto(origin);
-    await scan();
-    await page.locator('#budgetTotal').waitFor();
+    assert.equal(await page.locator('#addressInput').isVisible(),true,'manual field remains when Maps fails');
+    await scan();await page.locator('#hipshotInput').waitFor();
     assert.equal(await text('#projectedProfit'),'—');
-    assert.equal(await text('#metricRehab'),'Draft');
-    await page.getByRole('button',{name:'Apply rehab budget',exact:true}).click();
-    assert.match(await text('#budgetError'),/Add at least one/);
-    await add();
-    assert.equal(await text('#budgetTotal'),'$11,000.00');
-    assert.equal(await text('#projectedProfit'),'—');
-    await page.getByRole('button',{name:'Apply rehab budget',exact:true}).click();
-    assert.equal(await text('#projectedProfit'),'$52,263');
-    assert.equal(await text('#metricRehab'),'$11,000.00');
-    await page.getByRole('button',{name:'Edit Roof replacement',exact:true}).click();
-    await page.locator('#itemLabor').fill('9000');
-    await page.getByRole('button',{name:'Save changes',exact:true}).click();
-    assert.equal(await text('#budgetTotal'),'$16,500.00');
-    assert.equal(await text('#projectedProfit'),'—');
-    await page.getByRole('button',{name:'Apply rehab budget',exact:true}).click();
-    assert.equal(await text('#projectedProfit'),'$46,763');
-    await page.locator('#contingencyInput').fill('20');
-    await page.locator('#contingencyInput').press('Tab');
-    assert.equal(await text('#budgetTotal'),'$18,000.00');
-    assert.equal(await text('#projectedProfit'),'—');
-    await page.getByRole('button',{name:'Apply rehab budget',exact:true}).click();
-    // Browser reload + rescan restores the applied property budget.
-    await page.reload();await scan();await page.locator('#budgetTotal').waitFor();
-    assert.equal(await text('#budgetTotal'),'$18,000.00');
-    assert.equal(await text('#projectedProfit'),'$45,263');
-    // Unsaved catalog item cannot accidentally apply; catalog combined cost stays editable.
-    await page.locator('#wtSearch').fill('faucet');
-    await page.locator('#wtSearchResults button').first().click();
-    assert.equal(await page.locator('#itemOther').inputValue(),'274.82');
-    await page.getByRole('button',{name:'Apply rehab budget',exact:true}).click();
-    assert.match(await text('#budgetError'),/Save or cancel/);
-    await page.locator('#itemOther').fill('300');
-    await page.locator('#itemQty').fill('2.5');
-    await page.getByRole('button',{name:'Add item',exact:true}).click();
-    assert.equal(await text('#budgetSubtotal'),'$15,750.00');
-    assert.equal(await text('#budgetTotal'),'$18,900.00');
-    // Negative costs must not add an item.
-    await add({description:'Invalid',material:'-1'});
+    await page.locator('#hipshotInput').fill('30000');
+    assert.equal(await text('#hipshotLow'),'$27,000.00');
+    assert.equal(await text('#hipshotHigh'),'$33,000.00');
+    assert.equal(await text('#projectedProfit'),'$33,263');
+    await page.locator('#hipshotInput').fill('40000');
+    assert.equal(await text('#projectedProfit'),'$23,263');
+    await page.reload();await scan();await page.locator('#hipshotInput').waitFor();
+    assert.equal(await page.locator('#hipshotInput').inputValue(),'40000');
+    await scan('124 Test St, MO');await page.locator('#hipshotInput').waitFor();
+    assert.equal(await page.locator('#hipshotInput').inputValue(),'');
+    await scan();await page.locator('#hipshotInput').waitFor();
+    assert.equal(await page.locator('#hipshotInput').inputValue(),'40000');
+    await page.locator('#hipshotInput').fill('');assert.equal(await text('#projectedProfit'),'—');
+    await page.locator('#hipshotInput').fill('-1');assert.equal(await text('#projectedProfit'),'—');
     assert.match(await text('#budgetError'),/zero or greater/);
-    assert.equal(await page.locator('.budget-item').count(),2);
-    await page.getByRole('button',{name:'Cancel item',exact:true}).click();
-    // New property gets no previous property's scope.
-    await scan('124 Test St, Wentzville, MO 63385');await page.locator('#budgetTotal').waitFor();
-    assert.equal(await page.locator('.budget-item').count(),0);
-    assert.equal(await text('#projectedProfit'),'—');
-    await scan();await page.locator('#budgetTotal').waitFor();
-    assert.equal(await page.locator('.budget-item').count(),2);
-    assert.equal(await text('#projectedProfit'),'—');
-    await page.getByRole('button',{name:'Apply rehab budget',exact:true}).click();
-    const overflow = await page.evaluate(()=>document.documentElement.scrollWidth > window.innerWidth);
-    assert.equal(overflow,false,'mobile page must not overflow horizontally');
-    if(process.env.SCREENSHOT_DIR) {
-      await page.locator('.section-head').filter({hasText:'Build your rehab budget'}).scrollIntoViewIfNeeded();
+    await page.locator('#hipshotInput').fill('0');assert.equal(await text('#projectedProfit'),'$63,263');
+    await page.locator('#hipshotInput').fill('30000');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
+    if(process.env.SCREENSHOT_DIR){
+      await page.locator('#hipshotInput').scrollIntoViewIfNeeded();
       await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'rehab-mobile.png')});
       await page.setViewportSize({width:1280,height:900});
       await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'rehab-desktop.png'),fullPage:true});
     }
-    // FSBO still supports manual price and ARV, with no fabricated value or verdict.
     mode='fsbo';await scan('200 Off Market St, MO');
     await page.locator('#fsboPriceInput').fill('100000');
     await page.getByRole('button',{name:'Analyze',exact:false}).click();
-    await add({description:'No rehab required',material:'0',labor:'0'});
-    await page.getByRole('button',{name:'Apply rehab budget',exact:true}).click();
-    assert.equal(await text('#projectedProfit'),'—');
+    await page.locator('#hipshotInput').fill('10000');assert.equal(await text('#projectedProfit'),'—');
     await page.locator('#analysisArv').fill('200000');
     await page.getByRole('button',{name:'Update analysis inputs',exact:true}).click();
-    assert.equal(await text('#projectedProfit'),'$76,000');
+    assert.equal(await text('#projectedProfit'),'$66,000');
     // Backend failures clear prior figures and never fall back to mock values.
     mode='error';await scan('999 Fail St, MO');
     await page.waitForFunction(()=>document.getElementById('statusLine').textContent.includes('Scan failed'));
     assert.equal(await page.locator('#resultsWrap').innerText(),'');
     assert.match(await text('#statusLine'),/No sample data/);
     assert.equal(await page.locator('#scanBtn').isEnabled(),true);
+    // Simulate successful Places loading to catch the original duplicate-address regression.
+    mode='normal';
+    const withMaps = await context.newPage();
+    withMaps.on('pageerror',e=>errors.push(e.message));
+    await withMaps.addInitScript(()=>{
+      class FakePlaces extends HTMLElement {
+        constructor(){super();this.attachShadow({mode:'open'}).innerHTML='<input aria-label="Address suggestions">';}
+        get value(){return this.shadowRoot.querySelector('input').value;}
+        set placeholder(v){this.shadowRoot.querySelector('input').placeholder=v;}
+      }
+      customElements.define('gmp-place-autocomplete',FakePlaces);
+      window.google={maps:{importLibrary:async()=>({PlaceAutocompleteElement:FakePlaces})}};
+    });
+    await withMaps.goto(origin);
+    await withMaps.locator('gmp-place-autocomplete').waitFor();
+    assert.equal(await withMaps.locator('#addressInput').isVisible(),false);
+    assert.equal(await withMaps.locator('gmp-place-autocomplete').isVisible(),true);
+    const box=await withMaps.locator('gmp-place-autocomplete').boundingBox();
+    const scanBox=await withMaps.locator('#scanBtn').boundingBox();
+    assert.ok(Math.abs(box.y-scanBox.y)<1,'autocomplete and Scan stay on one row');
+    await withMaps.locator('gmp-place-autocomplete input').fill(fixture.address);
+    await withMaps.locator('#scanBtn').click();
+    await withMaps.locator('#hipshotInput').waitFor();
+    await withMaps.locator('#hipshotInput').fill('30000');
+    assert.equal(await withMaps.locator('#projectedProfit').innerText(),'$33,263');
+    await withMaps.locator('#addressModeBtn').click();
+    assert.equal(await withMaps.locator('#addressInput').isVisible(),true);
+    assert.equal(await withMaps.locator('gmp-place-autocomplete').isVisible(),false);
+    await withMaps.locator('#addressModeBtn').click();
+    assert.equal(await withMaps.locator('#addressInput').isVisible(),false);
+    assert.equal(await withMaps.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    if(process.env.SCREENSHOT_DIR){
+      await withMaps.screenshot({path:path.join(process.env.SCREENSHOT_DIR,'address-mobile.png')});
+    }
     assert.deepEqual(errors,[]);
-    console.log('Browser checks passed: manual/catalog budgets, edits, decimal quantities, contingency, draft/apply, persistence, property isolation, FSBO, failures, mobile overflow.');
+    console.log('Browser checks passed: Hipshot range and base amount, edits, persistence, validation, FSBO, failures, mobile layout, single address field with Maps loaded/unavailable.');
   } finally {
     await browser.close();
     server.close();
