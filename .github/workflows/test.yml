@@ -1,0 +1,33 @@
+name: Test deal analyzer
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: mkdir -p test-screenshots
+      - run: npm run test:browser
+        env:
+          SCREENSHOT_DIR: test-screenshots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rehab-browser-screenshots
+          path: test-screenshots/
+          if-no-files-found: ignore
