@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KYTALYST — Deal Scanner</title>
 <style>
   :root{
@@ -195,10 +195,6 @@
   .empty-state .glyph{font-size:32px; opacity:0.3; margin-bottom:14px;}
   .empty-state p{font-family:var(--mono); font-size:12px; color:var(--muted); max-width:280px; margin:0 auto; line-height:1.7;}
 
-  .mock-note{
-    margin:20px 20px 0; padding:10px 14px; background:rgba(213,127,66,0.08); border:1px dashed var(--copper);
-    border-radius:2px; font-family:var(--mono); font-size:10.5px; color:var(--copper-bright); line-height:1.6;
-  }
 
   /* Places Autocomplete container — wraps Google's element to match the existing input look */
   /* Places Autocomplete — Google added real CSS support for these directly on the element */
@@ -212,6 +208,32 @@
     border: 1px solid var(--line);
     border-radius: 2px;
   }
+
+  body{max-width:960px;margin:0 auto;}
+  .budget-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0;}
+  .budget-grid label,.budget-field{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);min-width:0;}
+  .budget-grid input,.budget-grid select,.budget-field input{box-sizing:border-box;min-width:0;width:100%;background:var(--ink);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:11px;font:inherit;font-size:16px;}
+  .budget-wide{grid-column:1/-1;}
+  .budget-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center;}
+  .budget-btn{border:1px solid var(--copper);background:var(--copper);color:white;padding:11px 14px;border-radius:3px;cursor:pointer;font:inherit;font-size:13px;}
+  .budget-btn.secondary{background:transparent;color:var(--copper-bright);}
+  .budget-item{border:1px solid var(--line);border-radius:3px;padding:12px;margin:12px 0;}
+  .budget-item-head{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .budget-item-head strong{overflow-wrap:anywhere;}
+  .budget-note{color:var(--muted);font-size:12px;line-height:1.6;margin:8px 0;}
+  .budget-status{color:var(--copper-bright);font-size:12px;line-height:1.6;}
+  .budget-summary{display:grid;gap:10px;margin:14px 0;font-family:var(--mono);font-size:13px;}
+  .budget-summary div{display:flex;justify-content:space-between;gap:12px;}
+  .budget-summary .total{border-top:1px solid var(--line);padding-top:12px;font-size:16px;}
+  .budget-error{color:#e08b83;font-size:13px;line-height:1.6;}
+  .verdict-banner.pending{border-color:var(--copper);background:rgba(181,101,47,0.12);}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--copper-bright);outline-offset:3px;}
+  .search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;}
+  .search-row>*{min-width:0;}
+  .address-autocomplete-wrap{grid-column:1/-1;}
+  .address-autocomplete-wrap:empty{display:none;}
+  @media(max-width:500px){.verdict-word{font-size:21px;}.verdict-sub{font-size:11px;}.verdict-profit .num{font-size:19px;}}
+  @media(min-width:700px){.budget-item .budget-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
 </style>
 <script>
   (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
@@ -231,35 +253,31 @@
   </div>
 
   <div class="search-panel">
-    <label class="search-label">Property Address</label>
+    <label class="search-label" for="addressInput">Property Address</label>
     <div class="search-row">
-      <div class="address-autocomplete-wrap" id="autocompleteMount"></div>
-      <input type="hidden" id="addressInput" value="">
+      <div class="address-autocomplete-wrap" id="autocompleteMount" aria-label="Optional address suggestions"></div>
+      <input type="text" id="addressInput" value="" aria-label="Property address" placeholder="Street, city, state ZIP" onkeydown="if(event.key==='Enter') runScan()">
       <button class="scan-btn" id="scanBtn" onclick="runScan()">Scan</button>
     </div>
-    <div class="status-line" id="statusLine"></div>
+    <div class="status-line" id="statusLine" role="status"></div>
     <button id="fsboManualBtn" onclick="showFSBOForm()" style="display:none; margin-top:10px; width:100%; padding:9px 14px; background:transparent; border:1px dashed var(--copper); border-radius:7px; color:var(--copper-bright); font-family:var(--mono); font-size:12px; letter-spacing:0.5px; cursor:pointer; text-align:left;">
       ✎ &nbsp;Enter price manually — FSBO / off-market
     </button>
-  </div>
-
-  <div id="mockNotice" class="mock-note" style="display:none;">
-    Running on mock data — the backend endpoint isn't reachable. Numbers below are realistic placeholders so the UI/flow can be reviewed now.
-    <br><span id="mockErrorDetail" style="font-weight:600;"></span>
   </div>
 
   <div id="resultsWrap"></div>
 
   <div class="empty-state" id="emptyState">
     <div class="glyph">⌂</div>
-    <p>Enter an address and scan for ARV, rehab estimate, and a deal / no deal verdict.</p>
+    <p>Scan a property, build your rehab budget, then apply it to calculate profit and your maximum offer.</p>
   </div>
 
+<script src="rehab-budget.js"></script>
 <script>
 // --- Light/Dark theme toggle (same pattern as JOBSpan) ---
 function applyTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('kytalyst-theme', theme);
+  try { localStorage.setItem('kytalyst-theme', theme); } catch (_) {}
   const btn = document.getElementById('themeToggleBtn');
   if (btn) btn.textContent = theme === 'light' ? '🌙 Dark' : '☀ Light';
 }
@@ -267,7 +285,9 @@ function toggleTheme(){
   const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
   applyTheme(current === 'light' ? 'dark' : 'light');
 }
-applyTheme(localStorage.getItem('kytalyst-theme') || 'dark');
+let savedTheme = 'dark';
+try { savedTheme = localStorage.getItem('kytalyst-theme') || 'dark'; } catch (_) {}
+applyTheme(savedTheme);
 
 // Live KYTALYST backend — deployed 7/15/26
 const CLOUD_FUNCTION_URL = "https://us-central1-kytrac-72d91.cloudfunctions.net/kytalystScan";
@@ -278,60 +298,241 @@ const CATALOG = [{"t":"1100 Plumbing","p":"Faucet Replacement","d":"Bath or kitc
 
 let lastScanData = null;
 let walkthroughItems = [];
-let fsboPrice = null; // set when user enters a manual asking price (FSBO/off-market)
-
-function catalogTrades(){
-  return [...new Set(CATALOG.map(r => r.t))].sort();
-}
-function catalogPackages(trade){
-  return [...new Set(CATALOG.filter(r => r.t === trade).map(r => r.p))].sort();
-}
-function catalogTiers(trade, pkg){
-  return CATALOG.filter(r => r.t === trade && r.p === pkg);
-}
-function walkthroughTotal(){
-  return walkthroughItems.reduce((sum, it) => sum + it.unitCost * it.qty, 0);
-}
-
+let contingencyPercent = 10;
+let budgetApplied = false;
+let budgetStorageMessage = '';
+let editingItemIndex = null;
 let currentSearchMatches = [];
 let selectedCatalogItem = null;
 
-function filterCatalogSearch(){
-  const q = (document.getElementById('wtSearch').value || '').toLowerCase().trim();
-  const resultsEl = document.getElementById('wtSearchResults');
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatCost(value){
+  return Number(value).toLocaleString('en-US', {style:'currency', currency:'USD'});
+}
+function budgetError(message){
+  document.getElementById('budgetError').textContent = message;
+}
+function saveBudget(){
+  try {
+    localStorage.setItem(RehabBudget.key(lastScanData.address), JSON.stringify({
+      version:1, items:walkthroughItems, contingencyPercent, applied:budgetApplied
+    }));
+    budgetStorageMessage = 'Saved on this browser for this property.';
+  } catch (_) {
+    budgetStorageMessage = 'Browser storage unavailable. Keep this page open to retain your budget.';
+  }
+}
+function loadBudget(address){
+  walkthroughItems = [];
+  contingencyPercent = 10;
+  budgetApplied = false;
+  editingItemIndex = null;
   selectedCatalogItem = null;
+  budgetStorageMessage = 'Budgets save on this browser for each property.';
+  try {
+    const saved = localStorage.getItem(RehabBudget.key(address));
+    if (saved) {
+      const budget = RehabBudget.restore(JSON.parse(saved));
+      walkthroughItems = budget.items;
+      contingencyPercent = budget.contingencyPercent;
+      budgetApplied = budget.applied;
+      budgetStorageMessage = 'Restored this property’s budget from this browser.';
+    }
+  } catch (_) {
+    budgetStorageMessage = 'Saved budget could not be loaded. Start a new budget below.';
+  }
+}
+function filterCatalogSearch(){
+  const q = document.getElementById('wtSearch').value.toLowerCase().trim();
+  selectedCatalogItem = null;
+  const resultsEl = document.getElementById('wtSearchResults');
   if (!q) { resultsEl.innerHTML = ''; return; }
   currentSearchMatches = CATALOG.filter(r =>
     (r.p + ' ' + r.t + ' ' + r.tl + ' ' + (r.d || '')).toLowerCase().includes(q)
-  ).slice(0, 8);
-  resultsEl.innerHTML = currentSearchMatches.length ? currentSearchMatches.map((r, i) => `
-    <div class="wt-search-row" onclick="selectCatalogItem(${i})">
-      <div>
-        <div class="wt-search-main">${r.p} — ${r.tl}</div>
-        <div class="wt-search-sub">${r.t}</div>
-      </div>
-      <div class="wt-search-price">${money(r.c)}</div>
-    </div>
-  `).join('') : '<div class="wt-search-row" style="cursor:default;"><div class="wt-search-sub">No matches — try a different word</div></div>';
+  ).slice(0,8);
+  resultsEl.innerHTML = currentSearchMatches.length ? currentSearchMatches.map((r,i) => `
+    <button type="button" class="wt-search-row" style="width:100%;background:transparent;text-align:left;" onclick="selectCatalogItem(${i})">
+      <span><span class="wt-search-main">${escapeHtml(r.p)} — ${escapeHtml(r.tl)}</span><br>
+      <span class="wt-search-sub">${escapeHtml(r.d)} · ${escapeHtml(r.t)}</span></span>
+      <span class="wt-search-price">${formatCost(r.c)}</span>
+    </button>`).join('') : '<p class="budget-note">No match. Add your own item below.</p>';
 }
 function selectCatalogItem(i){
   selectedCatalogItem = currentSearchMatches[i];
-  document.getElementById('wtSearch').value = `${selectedCatalogItem.p} — ${selectedCatalogItem.tl}`;
+  editingItemIndex = null;
+  const r = selectedCatalogItem;
+  document.getElementById('itemDescription').value = `${r.p} — ${r.tl}`;
+  document.getElementById('itemTrade').value = r.t;
+  document.getElementById('itemUnit').value = 'package';
+  document.getElementById('itemQty').value = 1;
+  document.getElementById('itemMaterial').value = 0;
+  document.getElementById('itemLabor').value = 0;
+  document.getElementById('itemOther').value = r.c;
   document.getElementById('wtSearchResults').innerHTML = '';
+  document.getElementById('itemSaveBtn').textContent = 'Add item';
+  document.getElementById('itemSourceNote').textContent = 'JOBSpan combined cost is in Other / bundled. Adjust it or replace it with your material and labor breakdown.';
+  document.getElementById('itemDescription').focus();
 }
-function addWalkthroughItem(){
-  if (!selectedCatalogItem) return;
-  const qty = Math.max(1, parseInt(document.getElementById('wtQty').value, 10) || 1);
-  walkthroughItems.push({
-    trade: selectedCatalogItem.t, pkg: selectedCatalogItem.p, tierLabel: selectedCatalogItem.tl,
-    unitCost: selectedCatalogItem.c, qty
-  });
+function saveRehabItem(){
+  try {
+    const item = RehabBudget.item({
+      description:document.getElementById('itemDescription').value,
+      trade:document.getElementById('itemTrade').value,
+      unit:document.getElementById('itemUnit').value,
+      qty:document.getElementById('itemQty').value,
+      material:document.getElementById('itemMaterial').value,
+      labor:document.getElementById('itemLabor').value,
+      other:document.getElementById('itemOther').value,
+      source:selectedCatalogItem ? 'JOBSpan' : (editingItemIndex !== null ? walkthroughItems[editingItemIndex].source : 'Manual')
+    });
+    // Validate the whole proposed budget before mutating the current one.
+    const next = walkthroughItems.slice();
+    if (editingItemIndex === null) next.push(item); else next[editingItemIndex] = item;
+    RehabBudget.calculate(next, contingencyPercent);
+    walkthroughItems = next;
+    budgetApplied = false;
+    editingItemIndex = null;
+    selectedCatalogItem = null;
+    saveBudget();
+    renderResults();
+    document.getElementById('itemDescription').focus();
+  } catch(err){ budgetError(err.message); }
+}
+function editRehabItem(i){
+  editingItemIndex = i;
+  selectedCatalogItem = null;
+  const it = walkthroughItems[i];
+  for (const field of ['Description','Trade','Unit','Qty','Material','Labor','Other']) {
+    document.getElementById('item'+field).value = it[field.toLowerCase()];
+  }
+  document.getElementById('itemSaveBtn').textContent = 'Save changes';
+  document.getElementById('itemSourceNote').textContent = 'Editing an existing item. Save changes or cancel before applying the budget.';
+  budgetError('');
+  document.getElementById('itemDescription').focus();
+}
+function cancelRehabItem(){
+  editingItemIndex = null;
   selectedCatalogItem = null;
   renderResults();
 }
-function removeWalkthroughItem(idx){
-  walkthroughItems.splice(idx, 1);
+function removeRehabItem(i){
+  walkthroughItems.splice(i,1);
+  budgetApplied = false;
+  editingItemIndex = null;
+  selectedCatalogItem = null;
+  saveBudget();
   renderResults();
+}
+function changeContingency(input){
+  try {
+    const next = RehabBudget.calculate(walkthroughItems, input.value);
+    contingencyPercent = next.contingencyPercent;
+    budgetApplied = false;
+    saveBudget();
+    // Preserve unsaved line-item fields while refreshing calculations.
+    refreshBudgetSummary();
+    refreshDealMetrics();
+    budgetError('');
+  } catch(err) {
+    input.value = contingencyPercent;
+    budgetError(err.message);
+  }
+}
+function applyRehabBudget(){
+  if (!walkthroughItems.length) { budgetError('Add at least one rehab item. For no work, add an explicit $0 item.'); return; }
+  if (document.getElementById('itemDescription').value.trim() || selectedCatalogItem || editingItemIndex !== null) {
+    budgetError('Save or cancel the item in the editor before applying the budget.'); return;
+  }
+  budgetApplied = true;
+  saveBudget();
+  refreshBudgetSummary();
+  refreshDealMetrics();
+  budgetError('');
+}
+function refreshBudgetSummary(){
+  const b = RehabBudget.calculate(walkthroughItems, contingencyPercent);
+  document.getElementById('budgetSubtotal').textContent = formatCost(b.subtotal);
+  document.getElementById('budgetContingency').textContent = formatCost(b.contingency);
+  document.getElementById('budgetTotal').textContent = formatCost(b.total);
+  document.getElementById('budgetState').textContent = budgetApplied ? 'Applied to analysis. Changes return the budget to draft.' : 'Draft — profit and maximum offer appear after you apply your complete budget.';
+  document.getElementById('budgetStorage').textContent = budgetStorageMessage;
+}
+function applyAnalysisInputs(){
+  try {
+    const listPrice = document.getElementById('analysisPrice').value;
+    const arv = document.getElementById('analysisArv').value;
+    RehabBudget.evaluate({listPrice,arv,rehabTotal:0});
+    lastScanData.listPrice = Number(listPrice);
+    lastScanData.arv = Number(arv);
+    refreshDealMetrics();
+    document.getElementById('analysisError').textContent = '';
+  } catch(err){ document.getElementById('analysisError').textContent = err.message; }
+}
+function refreshDealMetrics(){
+  const b = RehabBudget.calculate(walkthroughItems, contingencyPercent);
+  let deal = null;
+  if (budgetApplied) {
+    try { deal = RehabBudget.evaluate({listPrice:lastScanData.listPrice,arv:lastScanData.arv,rehabTotal:b.total}); }
+    catch (_) {} // Missing valuation requires a manual ARV before a verdict.
+  }
+  document.getElementById('verdictBanner').className = 'verdict-banner ' + (deal ? (deal.isDeal ? 'deal' : 'nodeal') : 'pending');
+  document.getElementById('verdictWord').textContent = deal ? (deal.isDeal ? 'DEAL' : 'NO DEAL') : (budgetApplied ? 'ENTER PRICE / ARV' : 'BUDGET NEEDED');
+  document.getElementById('projectedProfit').textContent = deal ? money(deal.projectedProfit) : '—';
+  document.getElementById('metricRehab').textContent = budgetApplied ? formatCost(b.total) : 'Draft';
+  document.getElementById('metricMao').textContent = deal ? money(deal.mao) : '—';
+  document.getElementById('metricPrice').textContent = money(lastScanData.listPrice);
+  document.getElementById('metricArv').textContent = lastScanData.arv > 0 ? money(lastScanData.arv) : 'Enter ARV';
+}
+function renderBudget(){
+  const b = RehabBudget.calculate(walkthroughItems, contingencyPercent);
+  return `
+    <div class="section">
+      <div class="section-head">Build your rehab budget</div>
+      <div class="walkthrough-box">
+        <p class="budget-note">Enter the work you expect to perform. Costs are per unit; quantity multiplies material + labor + other. No age or square-footage formula is used.</p>
+        <label class="budget-field">Optional JOBSpan starting point
+          <input type="text" id="wtSearch" placeholder="Search faucet, HVAC, drywall…" oninput="filterCatalogSearch()" autocomplete="off">
+        </label>
+        <div class="wt-search-results" id="wtSearchResults"></div>
+        <p class="budget-note">Catalog prices are combined package costs from the July 2026 export. Check the package scope and quantity; every cost is editable.</p>
+        <div class="budget-grid">
+          <label class="budget-wide">Work description<input id="itemDescription" placeholder="Roof replacement, permit, dumpster…" maxlength="300"></label>
+          <label>Trade / category<input id="itemTrade" value="General" maxlength="100"></label>
+          <label>Unit<input id="itemUnit" value="each" placeholder="sq ft, hour, allowance" maxlength="40"></label>
+          <label>Quantity<input id="itemQty" type="number" min="0.001" step="any" value="1"></label>
+          <label>Material per unit ($)<input id="itemMaterial" type="number" min="0" step="0.01" value="0"></label>
+          <label>Labor per unit ($)<input id="itemLabor" type="number" min="0" step="0.01" value="0"></label>
+          <label>Other / bundled per unit ($)<input id="itemOther" type="number" min="0" step="0.01" value="0"></label>
+        </div>
+        <p id="itemSourceNote" class="budget-note">For a subcontractor quote or allowance, enter quantity 1 and put the whole amount in Other / bundled.</p>
+        <div class="budget-actions">
+          <button class="budget-btn" id="itemSaveBtn" onclick="saveRehabItem()">Add item</button>
+          <button class="budget-btn secondary" onclick="cancelRehabItem()">Cancel item</button>
+        </div>
+        <div id="budgetError" class="budget-error" role="alert"></div>
+        ${b.lines.length ? b.lines.map((it,i) => `
+          <div class="budget-item">
+            <div class="budget-item-head"><strong>${escapeHtml(it.description)}</strong><strong>${formatCost(it.total)}</strong></div>
+            <p class="budget-note">${escapeHtml(it.trade)} · ${it.qty} ${escapeHtml(it.unit)} · ${escapeHtml(it.source)}<br>
+              Per unit: material ${formatCost(it.material)} + labor ${formatCost(it.labor)} + other / bundled ${formatCost(it.other)}</p>
+            <div class="budget-actions"><button class="budget-btn secondary" onclick="editRehabItem(${i})" aria-label="Edit ${escapeHtml(it.description)}">Edit</button>
+              <button class="budget-btn secondary" onclick="removeRehabItem(${i})" aria-label="Remove ${escapeHtml(it.description)}">Remove</button></div>
+          </div>`).join('') : '<p class="budget-note">No rehab items yet. Build your scope above, including work outside the JOBSpan catalog.</p>'}
+        <label class="budget-field" style="max-width:220px;margin-top:16px;">Contingency (%)
+          <input type="number" id="contingencyInput" min="0" max="100" step="0.1" value="${contingencyPercent}" onchange="changeContingency(this)">
+        </label>
+        <div class="budget-summary">
+          <div><span>Line-item subtotal</span><b id="budgetSubtotal">${formatCost(b.subtotal)}</b></div>
+          <div><span>Contingency</span><b id="budgetContingency">${formatCost(b.contingency)}</b></div>
+          <div class="total"><span>Total rehab budget</span><b id="budgetTotal">${formatCost(b.total)}</b></div>
+        </div>
+        <p id="budgetState" class="budget-status" aria-live="polite"></p>
+        <button class="budget-btn" onclick="applyRehabBudget()">Apply rehab budget</button>
+        <p id="budgetStorage" class="budget-note"></p>
+      </div>
+    </div>`;
 }
 
 // --- Google Places Autocomplete (frontend-only; does not touch kytalystScan or RentCast calls) ---
@@ -343,19 +544,12 @@ function removeWalkthroughItem(idx){
       includedRegionCodes: ["us"],
       includedPrimaryTypes: ["street_address", "premise", "subpremise"]
     });
-    autocompleteEl.placeholder = "Start typing a property address...";
+    autocompleteEl.placeholder = "Optional address suggestions…";
     document.getElementById('autocompleteMount').appendChild(autocompleteEl);
+    // The plain address field remains available when Maps is unavailable.
+    autocompleteEl.style.marginBottom = '8px';
 
     const hiddenInput = document.getElementById('addressInput');
-
-    // Coming from daily.html's "Open Full Walkthrough" link? Prefill and auto-run the scan.
-    const urlParams = new URLSearchParams(window.location.search);
-    const prefillAddress = urlParams.get('address');
-    if (prefillAddress) {
-      hiddenInput.value = prefillAddress;
-      try { autocompleteEl.value = prefillAddress; } catch(_) {}
-      setTimeout(() => runScan(), 300); // small delay so the Maps script has time to fully settle
-    }
 
     // Fallback: if the user types a full address but never picks a dropdown suggestion,
     // keep the hidden field in sync with their raw typed text so Scan still works.
@@ -386,21 +580,9 @@ function removeWalkthroughItem(idx){
       hiddenInput.value = cleanAddress || place.formattedAddress || autocompleteEl.value || '';
     });
   } catch (err) {
-    console.warn('Places Autocomplete failed to load — manual address entry via the hidden default still works:', err);
+    console.warn('Places Autocomplete unavailable; use the address field:', err);
   }
 })();
-
-function estimateRehab(sqft, yearBuilt, rehabTier){
-  const currentYear = new Date().getFullYear();
-  const age = currentYear - (yearBuilt || currentYear - 40);
-  const sqftUsed = sqft || 1600;
-  const RATE_BY_TIER = { none: 15, light: 30, heavy: 60 };
-  const perSqft = RATE_BY_TIER[rehabTier] || RATE_BY_TIER.none;
-  let base = sqftUsed * perSqft;
-  base += age > 40 ? 6000 : (age > 20 ? 2500 : 0);
-  const unknownsBuffer = base * 0.25;
-  return { base: Math.round(base), unknownsBuffer: Math.round(unknownsBuffer), total: Math.round(base + unknownsBuffer), perSqft, rehabTier: rehabTier || 'none' };
-}
 
 function showFSBOForm(address) {
   // Show the manual override button (in case it was hidden)
@@ -409,7 +591,7 @@ function showFSBOForm(address) {
 
   const emptyState = document.getElementById('emptyState');
   emptyState.style.display = 'block';
-  const addr = address || document.getElementById('addressInput').value || '';
+  document.getElementById('resultsWrap').innerHTML = '';
   emptyState.innerHTML = `
     <div class="glyph">⌂</div>
     <p style="margin-bottom:6px;"><strong>No active listing found</strong> for this address.</p>
@@ -434,74 +616,26 @@ function applyFSBOPrice() {
     if (input) input.style.border = '1px solid var(--red)';
     return;
   }
-  fsboPrice = price;
-
   // Merge asking price into whatever data the backend already returned
   // (lastScanData has real AVM comps + ARV even for no-listing addresses)
   const existing = lastScanData || {};
-  const sqft = existing.sqft || 1600;
-  const yearBuilt = existing.yearBuilt || 1990;
-  const rehab = existing.rehab || estimateRehab(sqft, yearBuilt, existing.rehabTier);
-
   lastScanData = {
     ...existing,
     listPrice: price,                            // user's asking price
     listingStatus: 'FSBO / Off-Market',
     distressSignals: existing.distressSignals || [],
     rehabTier: existing.rehabTier || 'none',
-    rehab,
     comps: existing.comps || [],                 // real comps from AVM
     _isFSBO: true,
   };
 
   document.getElementById('emptyState').style.display = 'none';
-  walkthroughItems = [];
   renderResults();
-}
-
-function applyFSBOArv() {
-  const input = document.getElementById('fsboArvInput');
-  const arv = parseFloat(input ? input.value : 0);
-  if (!arv || arv <= 0) { if(input) input.style.border='1px solid var(--red)'; return; }
-  if (lastScanData) { lastScanData.arv = arv; renderResults(); }
-}
-
-function evaluateDeal({ listPrice, arv, rehabTotal, wantedProfit }){
-  const closingCosts = listPrice * 0.035;
-  const sellingCosts = arv * (0.0125 + 0.03 + 0.06);
-  const allInCost = listPrice + rehabTotal + closingCosts;
-  const netSalePrice = arv - sellingCosts;
-  const projectedProfit = netSalePrice - allInCost;
-  const isDeal = projectedProfit >= wantedProfit;
-  const mao = arv - sellingCosts - rehabTotal - closingCosts - wantedProfit;
-  return { projectedProfit: Math.round(projectedProfit), isDeal, mao: Math.round(mao), allInCost: Math.round(allInCost) };
 }
 
 function money(n){
   const sign = n < 0 ? "-" : "";
   return sign + "$" + Math.abs(Math.round(n)).toLocaleString();
-}
-
-async function fetchMockScan(address){
-  await new Promise(r => setTimeout(r, 900));
-  const sqft = 1657, yearBuilt = 2004, listPrice = 160000, arv = 255000;
-  const rehab = estimateRehab(sqft, yearBuilt, "heavy");
-  return {
-    address, sqft, yearBuilt, listPrice, arv,
-    listingStatus: "Active",
-    distressSignals: ["as-is", "estate sale", "TLC"],
-    rehabTier: "heavy",
-    rehab,
-    comps: [
-      { addr: "23 Crimson Leaf Ct", price: 249900 },
-      { addr: "27 Crimson Leaf Ct", price: 258500 },
-      { addr: "29 Crimson Leaf Ct", price: 251000 }
-    ],
-    agentName: "Jane Sample",
-    agentPhone: "3145551234",
-    agentEmail: "jane@sampleoffice.com",
-    officeName: "Sample Realty Group"
-  };
 }
 
 async function fetchRealScan(address){
@@ -528,12 +662,15 @@ async function runScan(){
   statusLine.textContent = "Pulling property data + comps…";
   document.getElementById('resultsWrap').innerHTML = "";
   document.getElementById('emptyState').style.display = "none";
-  document.getElementById('mockNotice').style.display = "none";
+  lastScanData = null;
+  document.getElementById('fsboManualBtn').style.display = 'none';
 
   let data;
-  let usingMock = false;
+
   try{
     data = await fetchRealScan(address);
+    data.address = data.address || address;
+    loadBudget(data.address);
     // Backend now returns 200 even for FSBO/off-market — check the flag
     if (data.listingNotFound) {
       statusLine.textContent = "";
@@ -544,25 +681,17 @@ async function runScan(){
       return;
     }
   }catch(err){
-    console.warn("Live backend failed, falling back to mock:", err.message);
-    usingMock = true;
-    const detailEl = document.getElementById('mockErrorDetail');
-    if (detailEl) detailEl.textContent = `Actual error: [${err.status || 'no status'}] ${err.message}`;
-    try{
-      data = await fetchMockScan(address);
-    }catch(mockErr){
-      statusLine.textContent = "Scan failed: " + err.message;
-      btn.disabled = false;
-      return;
-    }
+    console.warn('Live scan failed:', err.message);
+    statusLine.textContent = 'Scan failed: ' + err.message + '. No sample data is used. Try again.';
+    lastScanData = null;
+    btn.disabled = false;
+    return;
   }
 
-  document.getElementById('mockNotice').style.display = usingMock ? "block" : "none";
   statusLine.textContent = "";
   btn.disabled = false;
 
   lastScanData = data;
-  walkthroughItems = [];
   // After a live scan succeeds, show the manual override button
   const manualBtn = document.getElementById('fsboManualBtn');
   if (manualBtn) manualBtn.style.display = 'block';
@@ -573,23 +702,22 @@ function renderResults(){
   const data = lastScanData;
   if (!data) return;
 
-  const wantedProfit = 20000;
-  const usingWalkthrough = walkthroughItems.length > 0;
-  const rehabTotalUsed = usingWalkthrough ? walkthroughTotal() : data.rehab.total;
-  const deal = evaluateDeal({ listPrice: data.listPrice, arv: data.arv, rehabTotal: rehabTotalUsed, wantedProfit });
-
   const fsboBadge = data._isFSBO
     ? `<div style="margin-top:6px; display:inline-block; padding:3px 10px; background:rgba(181,101,47,0.18); border:1px solid var(--copper); border-radius:5px; font-family:var(--mono); font-size:10px; letter-spacing:0.8px; color:var(--copper-bright);">FSBO / OFF-MARKET</div>`
     : '';
 
-  const fsboArvNote = data._isFSBO
-    ? `<div style="margin:12px 0 4px; font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:0.5px;">ARV IS ESTIMATED — enter your own below to refine:</div>
-       <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
-         <input type="number" id="fsboArvInput" placeholder="Your ARV" value="${Math.round(data.arv)}"
-           style="flex:1; max-width:180px; padding:8px 10px; background:var(--card); border:1px solid var(--line); border-radius:6px; color:var(--paper); font-family:var(--mono); font-size:14px; outline:none;">
-         <button onclick="applyFSBOArv()" style="padding:8px 14px; background:var(--copper); border:none; border-radius:6px; color:#fff; font-family:var(--mono); font-size:12px; cursor:pointer;">Update</button>
-       </div>`
-    : '';
+  const analysisInputs = `
+    <div class="section">
+      <div class="section-head">Analysis inputs</div>
+      <p class="budget-note">RentCast value is a starting estimate of current value, not a verified after-repair value. Enter the ARV supported by your renovation scope and comps.</p>
+      <div class="budget-grid">
+        <label>Purchase price ($)<input id="analysisPrice" type="number" min="1" step="0.01" value="${Number(data.listPrice) || 0}"></label>
+        <label>Your ARV ($)<input id="analysisArv" type="number" min="1" step="0.01" value="${Number(data.arv) || 0}"></label>
+      </div>
+      <button class="budget-btn secondary" onclick="applyAnalysisInputs()">Update analysis inputs</button>
+      <div id="analysisError" class="budget-error" role="alert"></div>
+      <p class="budget-note">Current assumptions: $20,000 target profit; acquisition closing costs 3.5% of purchase price; resale deductions 10.25% of ARV (existing model). Check financing, holding costs, commissions, and taxes for your deal.</p>
+    </div>`;
 
   const GKEY = "AIzaSyBBJGJy8fxsb5C63eCXQnq1MN14OX8D5-0";
   const svUrl = (addr, w=640, h=200) =>
@@ -597,92 +725,49 @@ function renderResults(){
 
   const wrap = document.getElementById('resultsWrap');
   wrap.innerHTML = `
-    <div class="verdict-banner ${deal.isDeal ? 'deal' : 'nodeal'}" style="padding:0; overflow:hidden; flex-direction:column;">
+    <div id="verdictBanner" class="verdict-banner pending" style="padding:0; overflow:hidden; flex-direction:column;">
       <div style="position:relative; width:100%; height:180px; overflow:hidden; border-radius:10px 10px 0 0;">
         <img src="${svUrl(data.address)}" alt="Street view" style="width:100%; height:100%; object-fit:cover; display:block;" onerror="this.style.display='none'">
         <div style="position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.7));"></div>
         <div style="position:absolute; bottom:12px; left:14px; right:14px; display:flex; justify-content:space-between; align-items:flex-end;">
           <div>
-            <div class="verdict-word" style="margin:0;">${deal.isDeal ? 'DEAL' : 'NO DEAL'}</div>
-            <div class="verdict-sub" style="color:rgba(255,255,255,0.8);">${data.address}</div>
+            <div id="verdictWord" class="verdict-word" style="margin:0;">BUDGET / ARV NEEDED</div>
+            <div class="verdict-sub" style="color:rgba(255,255,255,0.8);">${escapeHtml(data.address)}</div>
             ${fsboBadge}
             ${!data._isFSBO ? `<div class="status-badge ${data.listingStatus === 'Active' ? 'active' : 'inactive'}" style="margin-top:4px;">
-              ${data.listingStatus === 'Active' ? 'Active on Market' : data.listingStatus}
+              ${data.listingStatus === 'Active' ? 'Active on Market' : escapeHtml(data.listingStatus)}
             </div>` : ''}
           </div>
           <div class="verdict-profit" style="text-align:right; flex-shrink:0; margin-left:12px;">
-            <div class="num">${money(deal.projectedProfit)}</div>
+            <div class="num" id="projectedProfit">—</div>
             <div class="lbl">Projected Profit</div>
           </div>
         </div>
       </div>
-      </div>
     </div>
 
-    ${fsboArvNote}
+    ${analysisInputs}
     <div class="metrics-grid">
-      <div class="metric-cell"><span class="lbl">${data._isFSBO ? 'Asking Price' : 'List Price'}</span><span class="val">${money(data.listPrice)}</span></div>
-      <div class="metric-cell"><span class="lbl">ARV</span><span class="val">${money(data.arv)}</span></div>
-      <div class="metric-cell"><span class="lbl">${usingWalkthrough ? 'Rehab (Walkthrough)' : 'Rehab (Formula Est.)'}</span><span class="val">${money(rehabTotalUsed)}</span></div>
-      <div class="metric-cell"><span class="lbl">Max Offer (MAO)</span><span class="val">${money(deal.mao)}</span></div>
+      <div class="metric-cell"><span class="lbl">${data._isFSBO ? 'Asking Price' : 'List Price'}</span><span class="val" id="metricPrice">${money(data.listPrice)}</span></div>
+      <div class="metric-cell"><span class="lbl">ARV</span><span class="val" id="metricArv">${money(data.arv)}</span></div>
+      <div class="metric-cell"><span class="lbl">Rehab budget</span><span class="val" id="metricRehab">Draft</span></div>
+      <div class="metric-cell"><span class="lbl">Max Offer (MAO)</span><span class="val" id="metricMao">—</span></div>
       <div class="metric-cell"><span class="lbl">Sqft</span><span class="val">${(data.sqft || 0).toLocaleString()}</span></div>
       <div class="metric-cell"><span class="lbl">Year Built</span><span class="val">${data.yearBuilt || "—"}</span></div>
     </div>
 
     <div class="section">
-      <div class="section-head">Distress Signals · ${data.rehabTier} rehab tier</div>
+      <div class="section-head">Distress Signals · ${escapeHtml(data.rehabTier)} rehab tier</div>
       <div class="chip-row">
-        ${(data.distressSignals && data.distressSignals.length) ? data.distressSignals.map(s => `<span class="chip">${s}</span>`).join('') : '<span class="chip">none detected</span>'}
+        ${(data.distressSignals && data.distressSignals.length) ? data.distressSignals.map(s => `<span class="chip">${escapeHtml(s)}</span>`).join('') : '<span class="chip">none detected</span>'}
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-head">Live Walkthrough — Real JOBSpan Pricing</div>
-      <div class="walkthrough-box">
-        <input type="text" id="wtSearch" placeholder="Search a package — e.g. faucet, HVAC, drywall..." oninput="filterCatalogSearch()" autocomplete="off">
-        <div class="wt-search-results" id="wtSearchResults"></div>
-        <div class="wt-qty-add">
-          <input type="number" id="wtQty" value="1" min="1">
-          <button class="wt-add-btn" onclick="addWalkthroughItem()">Add</button>
-        </div>
-
-        ${walkthroughItems.length ? walkthroughItems.map((it, i) => `
-          <div class="wt-item-row">
-            <div>
-              <div class="wt-item-desc">${it.pkg} — ${it.tierLabel}</div>
-              <div class="wt-item-sub">${it.trade} · Qty ${it.qty}</div>
-            </div>
-            <div class="wt-item-right">
-              <span class="wt-item-cost">${money(it.unitCost * it.qty)}</span>
-              <button class="wt-remove" onclick="removeWalkthroughItem(${i})">Remove</button>
-            </div>
-          </div>
-        `).join('') : '<div class="wt-empty">No items added yet — search a package above, then tap Add as you walk the house.</div>'}
-
-        ${walkthroughItems.length ? `
-        <div class="wt-total-row">
-          <span>Walkthrough Total</span>
-          <span>${money(walkthroughTotal())}</span>
-        </div>` : ''}
-
-        <div class="wt-source-note">Prices are real contractor cost from 7 Pillars' audited JOBSpan catalog (16 trades, 89 packages) — not customer-facing quotes. Trades without real data yet (roofing, siding, tiling, etc.) aren't in this list rather than showing a fake number.</div>
-      </div>
-    </div>
+    ${renderBudget()}
 
     <div class="section">
-      ${usingWalkthrough ? `
-        <div class="formula-muted">Formula estimate (not used): ${money(data.rehab.total)} — replaced by your walkthrough total above.</div>
-      ` : `
-        <div class="section-head">Formula Rehab Estimate (age/size guess — search a package below for a real number)</div>
-        <div class="rehab-breakdown">
-          <div class="rline"><span>Base estimate (age/size)</span><b>${money(data.rehab.base)}</b></div>
-          <div class="rline"><span>Unknowns buffer (25%)</span><b>${money(data.rehab.unknownsBuffer)}</b></div>
-        </div>
-      `}
-    </div>
-
-    <div class="section">
-      <div class="section-head">Comparable Sales</div>
+      <div class="section-head">RentCast valuation comparables</div>
+      <p class="budget-note">These are valuation comparables returned by RentCast; closed-sale status and renovated condition have not been independently verified.</p>
       ${(data.comps && data.comps.length) ? data.comps.map(c => {
         const details = [
           c.beds ? `${c.beds}bd` : null,
@@ -692,7 +777,7 @@ function renderResults(){
         return `<div class="comp-row" style="display:flex; align-items:center; gap:10px; padding:10px 0;">
           <img src="${svUrl(c.addr)}" alt="" style="width:72px; height:52px; object-fit:cover; border-radius:5px; flex-shrink:0; background:var(--card);" onerror="this.style.display='none'">
           <div style="flex:1; min-width:0;">
-            <div class="comp-addr" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.addr}</div>
+            <div class="comp-addr" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(c.addr)}</div>
             ${details ? `<div style="font-size:11px; color:var(--muted); margin-top:2px;">${details}</div>` : ''}
           </div>
           <span class="comp-price" style="flex-shrink:0;">${money(c.price)}</span>
@@ -705,16 +790,24 @@ function renderResults(){
       <div class="section-head">Listing Agent</div>
       <div class="agent-card">
         <div>
-          <div class="agent-name">${data.agentName}</div>
-          ${data.officeName ? `<div class="agent-office">${data.officeName}</div>` : ''}
+          <div class="agent-name">${escapeHtml(data.agentName)}</div>
+          ${data.officeName ? `<div class="agent-office">${escapeHtml(data.officeName)}</div>` : ''}
         </div>
         <div class="agent-actions">
-          ${data.agentPhone ? `<a class="agent-btn" href="tel:${data.agentPhone}">Call</a>` : ''}
-          ${data.agentEmail ? `<a class="agent-btn" href="mailto:${data.agentEmail}">Email</a>` : ''}
+          ${data.agentPhone ? `<a class="agent-btn" href="tel:${escapeHtml(data.agentPhone)}">Call</a>` : ''}
+          ${data.agentEmail ? `<a class="agent-btn" href="mailto:${escapeHtml(data.agentEmail)}">Email</a>` : ''}
         </div>
       </div>
     </div>` : ''}
   `;
+  refreshBudgetSummary();
+  refreshDealMetrics();
+}
+// Daily shortlist links also work when Google Maps is unavailable.
+const prefillAddress = new URLSearchParams(window.location.search).get('address');
+if (prefillAddress) {
+  document.getElementById('addressInput').value = prefillAddress;
+  runScan();
 }
 </script>
 </body>
