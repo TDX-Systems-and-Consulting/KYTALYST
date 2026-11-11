@@ -6,7 +6,7 @@
 <title>KYTALYST — Find the upside</title>
 <meta name="description" content="Your real estate deal workspace. Scan a property, set your Hipshot rehab budget, and understand the upside.">
 <meta name="theme-color" content="#101917">
-<link rel="stylesheet" href="design.css?v=workspace-1">
+<link rel="stylesheet" href="design.css?v=discovery-1">
 <script>
   (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
     key: "AIzaSyBBJGJy8fxsb5C63eCXQnq1MN14OX8D5-0",
@@ -21,7 +21,7 @@
       <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 24V10l8-5 8 5v14l-8 5z"/><path d="M12 11v12m1-6 8-6m-8 6 8 6"/></svg></span>
       <span><span class="wordmark">KYTA<span>LYST</span></span><span class="tagline">A TDX investment workspace</span></span>
     </a>
-    <div class="nav-actions"><span class="workspace-label"><i></i> Deal workspace</span><button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀ Light</button></div>
+    <div class="nav-actions"><a class="daily-nav" href="daily.html">Daily matches ↗</a><span class="workspace-label"><i></i> Deal workspace</span><button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀ Light</button></div>
   </header>
 
   <main>
@@ -30,6 +30,7 @@
       <div class="eyebrow"><span></span> See the potential. Know the numbers.</div>
       <h1 id="introTitle">Find the <em>upside.</em></h1>
       <p>Turn a property into a clearer decision.<br> One address. Your rehab budget. The full picture.</p>
+      <a class="hero-discovery" href="daily.html">Find properties in my buy box <span>↗</span></a><p id="buyBoxPreview" class="buy-box-preview"></p>
       <div class="intro-caption"><span class="caption-rule"></span> Built for the way investors think.</div>
     </div>
     <div class="architecture" aria-hidden="true">
@@ -76,7 +77,9 @@
   </main>
   <footer class="site-footer"><span class="footer-brand">KYTALYST <i>by TDX Systems &amp; Consulting</i></span><span>Better numbers. Clearer decisions.</span></footer>
 
-<script src="rehab-budget.js?v=hipshot-save-1"></script>
+<script src="buy-box.js?v=discovery-1"></script>
+<script src="valuation.js?v=discovery-1"></script>
+<script src="rehab-budget.js?v=profit-30000"></script>
 <script>
 // --- Light/Dark theme toggle (same pattern as JOBSpan) ---
 function applyTheme(theme){
@@ -191,9 +194,10 @@ function applyAnalysisInputs(){
   try {
     const listPrice = document.getElementById('analysisPrice').value;
     const arv = document.getElementById('analysisArv').value;
-    RehabBudget.evaluate({listPrice,arv,rehabTotal:0});
+    RehabBudget.evaluate({listPrice,arv,rehabTotal:0,wantedProfit:BuyBox.defaults.minProfit});
     lastScanData.listPrice = Number(listPrice);
     lastScanData.arv = Number(arv);
+    lastScanData.arvOverridden = Number(arv) !== lastScanData.valuation?.arv;
     refreshDealMetrics();
     document.getElementById('analysisError').textContent = '';
   } catch(err){ document.getElementById('analysisError').textContent = err.message; }
@@ -203,10 +207,12 @@ function refreshDealMetrics(){
   let deal = null;
   try {
     range = RehabBudget.hipshot(hipshotAmount);
-    if (hipshotSaved) deal = RehabBudget.evaluate({listPrice:lastScanData.listPrice,arv:lastScanData.arv,rehabTotal:range.amount});
+    if (hipshotSaved) deal = RehabBudget.evaluate({listPrice:lastScanData.listPrice,arv:lastScanData.arv,rehabTotal:range.amount,wantedProfit:BuyBox.defaults.minProfit});
   } catch (_) {}
+  const overRehabCap = !!(deal && range.amount > BuyBox.defaults.maxRehab);
+  if (overRehabCap) deal.isDeal = false;
   document.getElementById('verdictBanner').className = 'verdict-banner ' + (deal ? (deal.isDeal ? 'deal' : 'nodeal') : 'pending');
-  document.getElementById('verdictWord').textContent = deal ? (deal.isDeal ? 'DEAL' : 'NO DEAL') : (range ? (hipshotSaved ? 'ENTER PRICE / ARV' : 'SAVE HIPSHOT') : 'HIPSHOT NEEDED');
+  document.getElementById('verdictWord').textContent = deal ? (overRehabCap ? 'REHAB OVER CAP' : deal.isDeal ? 'DEAL' : 'NO DEAL') : (range ? (hipshotSaved ? 'ENTER PRICE / ARV' : 'SAVE HIPSHOT') : 'HIPSHOT NEEDED');
   document.getElementById('projectedProfit').textContent = deal ? money(deal.projectedProfit) : '—';
   document.getElementById('metricRehab').textContent = range ? (hipshotSaved ? formatCost(range.amount) : 'Save Hipshot') : 'Enter Hipshot';
   document.getElementById('metricMao').textContent = deal ? money(deal.mao) : '—';
@@ -229,9 +235,10 @@ function updateDealVisuals(deal, range){
     allocation.innerHTML = '<p class="budget-note">Save a Hipshot to reveal your cost breakdown.</p>';
     return;
   }
-  const difference = deal.projectedProfit - 20000;
-  target.textContent = difference >= 0 ? money(difference) + ' above your $20,000 target' : money(-difference) + ' below your $20,000 target';
-  fill.style.width = Math.max(0, Math.min(100, deal.projectedProfit / 20000 * 100)) + '%';
+  const profitTarget = BuyBox.defaults.minProfit;
+  const difference = deal.projectedProfit - profitTarget;
+  target.textContent = difference >= 0 ? money(difference) + ' above your ' + money(profitTarget) + ' target' : money(-difference) + ' below your ' + money(profitTarget) + ' target';
+  fill.style.width = Math.max(0, Math.min(100, deal.projectedProfit / profitTarget * 100)) + '%';
   const parts = [
     {name:'Purchase + closing',value:lastScanData.listPrice * 1.035,kind:'purchase'},
     {name:'Hipshot rehab',value:range.amount,kind:'rehab'},
@@ -256,7 +263,7 @@ function renderBudget(){
           <div><span>Lower range <b>−10%</b></span><strong id="hipshotLow">—</strong></div>
           <div><span>Upper range <b>+10%</b></span><strong id="hipshotHigh">—</strong></div>
         </div>
-        <p class="budget-note">Your best rehab estimate, with room on either side.</p>
+        <p class="budget-note">Your rehab ceiling is $100,000. The ±10% range is shown for planning.</p>
         <div id="budgetError" class="budget-error" role="alert"></div>
         <p id="budgetStorage" class="budget-note" role="status"></p>
       </div>
@@ -369,6 +376,22 @@ function money(n){
   return sign + "$" + Math.abs(Math.round(n)).toLocaleString();
 }
 
+async function findDailyProperty(address){
+  try {
+    const response = await fetch('data/daily.json', {cache:'no-cache'});
+    if (!response.ok) return null;
+    const feed = await response.json();
+    const timestamp = Date.parse(feed.generatedAt);
+    if (feed.status !== 'ready' || !Number.isFinite(timestamp) || Date.now()-timestamp>48*3600000) return null;
+    const key = a => String(a).toLowerCase().replace(/[^a-z0-9]/g,'');
+    const row = feed.results.find(p=>key(p.address)===key(address)&&p.status==='Active'&&p.valuation?.arv&&p.valuation.comps?.length===3);
+    if (!row) return null;
+    return {address:row.address,listPrice:row.price,arv:row.valuation.arv,sqft:row.squareFootage,
+      beds:row.bedrooms,baths:row.bathrooms,propertyType:row.propertyType,listingStatus:row.status,
+      yearBuilt:row.yearBuilt||null,rehabTier:'Not assessed',distressSignals:[],comps:row.valuation.comps};
+  } catch (_) { return null; }
+}
+
 async function fetchRealScan(address){
   const res = await fetch(CLOUD_FUNCTION_URL, {
     method: "POST",
@@ -407,7 +430,12 @@ async function runScan(){
   let data;
 
   try{
-    data = await fetchRealScan(address);
+    data = await findDailyProperty(address) || await fetchRealScan(address);
+    const valuation = Valuation.estimate({address:data.address||address,sqft:data.sqft,beds:data.beds,baths:data.baths,propertyType:data.propertyType},data.comps);
+    data.providerEstimate = data.arv || null;
+    data.arv = valuation.arv || 0;
+    data.comps = valuation.comps;
+    data.valuation = valuation;
     data.address = data.address || address;
     loadBudget(data.address);
     // Backend now returns 200 even for FSBO/off-market — check the flag
@@ -455,14 +483,14 @@ function renderResults(){
   const analysisInputs = `
     <section class="section inputs-section">
       <div class="section-head"><span><i class="section-number">01</i> Set the numbers</span><span class="section-tag">Your assumptions</span></div>
-      <p class="budget-note">Start with the asking price. Refine the ARV using your planned renovation and comparable properties.</p>
+      <p class="budget-note">Estimated ARV is calculated automatically from the three comps below. Price and ARV overrides are optional.</p>
       <div class="budget-grid">
         <label>Purchase price ($)<input id="analysisPrice" type="number" min="1" step="0.01" value="${Number(data.listPrice) || 0}"></label>
-        <label>Your ARV ($)<input id="analysisArv" type="number" min="1" step="0.01" value="${Number(data.arv) || 0}"></label>
+        <label>Estimated ARV · optional override ($)<input id="analysisArv" type="number" min="1" step="0.01" value="${Number(data.arv) || 0}"></label>
       </div>
       <button class="budget-btn secondary" onclick="applyAnalysisInputs()">Update analysis inputs</button>
       <div id="analysisError" class="budget-error" role="alert"></div>
-      <details class="assumptions"><summary>Model assumptions &amp; valuation notes</summary><p>RentCast estimates current value, not verified after-repair value. This model uses a $20,000 profit target, 3.5% acquisition closing costs, and 10.25% resale deductions. Review financing, holding costs, commissions, and taxes for your deal.</p></details>
+      <details class="assumptions"><summary>Model assumptions &amp; valuation notes</summary><p>ARV is the median of 3 comp listing prices adjusted to the subject’s square footage. Renovated condition and sold prices are not verified. This model uses a $30,000 profit target, 3.5% acquisition closing costs, and 10.25% resale deductions. Review financing, holding costs, commissions, and taxes for your deal.</p></details>
     </section>`;
 
   const GKEY = "AIzaSyBBJGJy8fxsb5C63eCXQnq1MN14OX8D5-0";
@@ -505,9 +533,9 @@ function renderResults(){
     </section>
 
     <section class="section comps-section">
-      <div class="section-head"><span>Nearby perspective</span><span class="section-tag">RentCast comparables</span></div>
-      <p class="budget-note">These are valuation comparables returned by RentCast; closed-sale status and renovated condition have not been independently verified.</p>
-      <div class="comps-grid">${(data.comps && data.comps.length) ? data.comps.map(c => {
+      <div class="section-head"><span>Nearby perspective</span><span class="section-tag">3 comps · automatic ARV</span></div>
+      <p class="budget-note">${data.valuation?.arv ? `ARV: ${money(data.valuation.arv)} = median of the three size-adjusted values below. Based on listing prices; renovated condition is unverified.` : escapeHtml(data.valuation?.reason||'Three usable comps are needed to calculate ARV.')}</p>
+      <div class="comps-grid">${(data.comps && data.comps.length) ? data.comps.map((c,i) => {
         const details = [
           c.beds ? `${c.beds}bd` : null,
           c.baths ? `${c.baths}ba` : null,
@@ -516,10 +544,10 @@ function renderResults(){
         return `<article class="comp-row">
           <img src="${svUrl(c.addr)}" alt="" class="comp-photo" loading="lazy" onerror="this.style.display='none'">
           <div class="comp-description">
-            <div class="comp-addr">${escapeHtml(c.addr)}</div>
+            <div class="comp-addr"><span class="comp-index">Comp ${i+1}</span>${escapeHtml(c.addr)}</div>
             ${details ? `<div style="font-size:11px; color:var(--muted); margin-top:2px;">${details}</div>` : ''}
           </div>
-          <span class="comp-price">${money(c.price)}</span>
+          <span class="comp-price">${money(c.price)} <small>listing price</small></span><p class="comp-adjusted">${c.adjustedValue ? money(c.adjustedValue)+' at subject size' : 'Size adjustment unavailable'}</p>
         </article>`;
       }).join('') : '<p class="budget-note">No comparables returned for this property.</p>'}</div>
     </section>
@@ -542,6 +570,7 @@ function renderResults(){
   refreshBudgetSummary();
   refreshDealMetrics();
 }
+document.getElementById('buyBoxPreview').textContent = `${BuyBox.defaults.zipCode} + ${BuyBox.defaults.radiusMiles} miles · up to ${money(BuyBox.defaults.maxPrice)} · ${BuyBox.defaults.minBeds}+ beds / ${BuyBox.defaults.minBaths}+ bath`;
 // Daily shortlist links also work when Google Maps is unavailable.
 const prefillAddress = new URLSearchParams(window.location.search).get('address');
 if (prefillAddress) {

@@ -20,7 +20,7 @@
     if (!Number.isSafeInteger(Math.round(amount * 110))) throw new Error('Rehab budget is too large.');
     return { amount, low: round(amount * 0.9), high: round(amount * 1.1) };
   }
-  function evaluate({ listPrice, arv, rehabTotal, wantedProfit = 20000 }) {
+  function evaluate({ listPrice, arv, rehabTotal, wantedProfit = 30000 }) {
     const price = number(listPrice, 'Purchase price', true);
     const value = number(arv, 'ARV', true);
     const rehab = number(rehabTotal, 'Rehab total');
