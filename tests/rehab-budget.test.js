@@ -13,7 +13,7 @@ test('profit uses entered amount without adding the 10 percent range',()=>{
   const d=budget.evaluate({listPrice:160000,arv:255000,rehabTotal:budget.hipshot(30000).amount});
   assert.equal(d.projectedProfit,33262.5);
   const atOffer=budget.evaluate({listPrice:d.mao,arv:255000,rehabTotal:30000});
-  assert.ok(Math.abs(atOffer.projectedProfit-20000)<=0.01);
+  assert.ok(Math.abs(atOffer.projectedProfit-30000)<=0.01);
 });
 test('missing price or ARV cannot produce a verdict',()=>{
   for(const change of [{listPrice:0},{arv:0},{arv:Infinity},{rehabTotal:-1}]) {

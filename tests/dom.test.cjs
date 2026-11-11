@@ -7,9 +7,9 @@ const values=new Map();let mode='normal';
 const context=vm.createContext({document:window.document,window:{location:{search:''}},URLSearchParams,
   localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},console:{warn(){}},setTimeout:f=>f(),
   fetch:async(url,opts)=>({ok:mode!=='error',status:mode==='error'?500:200,json:async()=>mode==='error'?{error:'Unavailable'}:
-    {address:JSON.parse(opts.body).address,listPrice:mode==='fsbo'?0:160000,arv:mode==='fsbo'?0:255000,listingNotFound:mode==='fsbo',
-      sqft:1657,yearBuilt:2004,listingStatus:'Active',rehabTier:'heavy',distressSignals:['as-is'],rehab:{total:127000},comps:[]}})});
-vm.runInContext(fs.readFileSync('rehab-budget.js','utf8'),context);
+    {address:JSON.parse(opts.body).address,listPrice:mode==='fsbo'?0:160000,arv:mode==='fsbo'?0:999999,listingNotFound:mode==='fsbo',
+      sqft:1657,yearBuilt:2004,listingStatus:'Active',rehabTier:'heavy',distressSignals:['as-is'],rehab:{total:127000},comps:mode==='fsbo'?[]:[{addr:'125 Test St',price:250000,sqft:1657},{addr:'127 Test St',price:255000,sqft:1657},{addr:'129 Test St',price:260000,sqft:1657}]}})});
+for(const file of ['buy-box.js','valuation.js','rehab-budget.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
 const scripts=[...window.document.querySelectorAll('script')].filter(e=>!e.src);
 vm.runInContext(scripts.at(-1).textContent,context);
 const d=window.document;const el=id=>d.getElementById(id);const value=(id,v)=>{el(id).value=String(v)};
