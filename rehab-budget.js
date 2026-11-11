@@ -15,36 +15,10 @@
     }
     return n;
   }
-  function item(raw) {
-    const description = String(raw.description || '').trim();
-    if (!description) throw new Error('Enter a description for every rehab item.');
-    return {
-      description,
-      trade: String(raw.trade || 'General').trim(),
-      unit: String(raw.unit || 'each').trim(),
-      qty: number(raw.qty, 'Quantity', true),
-      material: number(raw.material, 'Material cost'),
-      labor: number(raw.labor, 'Labor cost'),
-      other: number(raw.other, 'Other / bundled cost'),
-      source: raw.source === 'JOBSpan' ? 'JOBSpan' : 'Manual',
-    };
-  }
-  function calculate(items, contingencyPercent) {
-    const percent = number(contingencyPercent, 'Contingency');
-    if (percent > 100) throw new Error('Contingency must be between 0 and 100%.');
-    const lines = items.map(raw => {
-      const it = item(raw);
-      const total = round(it.qty * (it.material + it.labor + it.other));
-      if (!Number.isFinite(total) || total > Number.MAX_SAFE_INTEGER / 100) {
-        throw new Error('Rehab item total is too large.');
-      }
-      return { ...it, total };
-    });
-    const subtotal = round(lines.reduce((sum, it) => sum + it.total, 0));
-    const contingency = round(subtotal * percent / 100);
-    const total = round(subtotal + contingency);
-    if (!Number.isSafeInteger(Math.round(total * 100))) throw new Error('Budget total is too large.');
-    return { lines, subtotal, contingency, total, contingencyPercent: percent };
+  function hipshot(value) {
+    const amount = round(number(value, 'Rehab budget'));
+    if (!Number.isSafeInteger(Math.round(amount * 110))) throw new Error('Rehab budget is too large.');
+    return { amount, low: round(amount * 0.9), high: round(amount * 1.1) };
   }
   function evaluate({ listPrice, arv, rehabTotal, wantedProfit = 20000 }) {
     const price = number(listPrice, 'Purchase price', true);
@@ -61,13 +35,12 @@
       mao: round(mao), allInCost: round(allInCost) };
   }
   function key(address) {
-    return 'kytalyst-rehab-v1:' + String(address).trim().toLowerCase().replace(/\s+/g, ' ');
+    return 'kytalyst-hipshot-v2:' + String(address).trim().toLowerCase().replace(/\s+/g, ' ');
   }
   function restore(raw) {
-    if (!raw || raw.version !== 1 || !Array.isArray(raw.items)) throw new Error('Invalid saved budget.');
-    const budget = calculate(raw.items, raw.contingencyPercent);
-    return { items: budget.lines.map(({ total, ...it }) => it),
-      contingencyPercent: budget.contingencyPercent, applied: raw.applied === true && raw.items.length > 0 };
+    if (!raw || raw.version !== 2) throw new Error('Invalid saved Hipshot.');
+    if (raw.amount === '') return { amount: '' };
+    return { amount: hipshot(raw.amount).amount };
   }
-  return { item, calculate, evaluate, key, restore };
+  return { hipshot, evaluate, key, restore };
 });
