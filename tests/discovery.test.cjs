@@ -29,7 +29,7 @@ test('ARV derives from exactly 3 distinct comparable price-per-sqft adjustments'
 });
 test('rehab ceiling is a cap, not an assumed cost',()=>{
   const s=BuyBox.screening(150000,300000);
-  assert.equal(s.maxRehabAtTarget,84000);assert.equal(s.supportsFullRehabCap,false);
+  assert.equal(s.maxRehabAtTarget,65000);assert.equal(s.supportsFullRehabCap,false);
   assert.equal(BuyBox.screening(100000,400000).maxRehabAtTarget,100000);
   assert.equal(BuyBox.screening(200000,200000).meetsTargetBeforeRehab,false);
 });
@@ -46,7 +46,7 @@ test('refresh detects price drops and reuses recent comp valuations',async()=>{
   const c=client([{...listing,price:140000}]);
   const next=await refresh({client:c,previous:first,box,now:new Date('2026-11-12T13:00:00Z')});
   assert.equal(c.calls.length,1);assert.equal(next.priceDropCount,1);assert.equal(next.results[0].previousPrice,150000);
-  assert.equal(next.results[0].screening.maxRehabAtTarget,94350);
+  assert.equal(next.results[0].screening.maxRehabAtTarget,75250);
 });
 test('valuation budget leaves honest pending rows instead of dropping matches',async()=>{
   const rows=[0,1,2].map(n=>({...listing,id:'id'+n,formattedAddress:n+' Example St'}));

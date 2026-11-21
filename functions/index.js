@@ -48,17 +48,6 @@ function estimateRehab(sqft, yearBuilt, rehabTier) {
   };
 }
 
-function evaluateDeal({ listPrice, arv, rehabTotal, wantedProfit }) {
-  const closingCosts = listPrice * 0.035;
-  const sellingCosts = arv * (0.0125 + 0.03 + 0.06);
-  const allInCost = listPrice + rehabTotal + closingCosts;
-  const netSalePrice = arv - sellingCosts;
-  const projectedProfit = netSalePrice - allInCost;
-  const isDeal = projectedProfit >= wantedProfit;
-  const mao = arv - sellingCosts - rehabTotal - closingCosts - wantedProfit;
-  return { projectedProfit: Math.round(projectedProfit), isDeal, mao: Math.round(mao) };
-}
-
 // Filter and score comps for similarity to subject property
 function filterComps(comparables, subjectSqft, subjectBeds, subjectBaths) {
   if (!comparables || comparables.length === 0) return [];

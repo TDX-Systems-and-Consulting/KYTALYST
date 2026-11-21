@@ -24,9 +24,10 @@
       Number(p.bedrooms)>=box.minBeds&&Number(p.bathrooms)>=box.minBaths&&
       box.propertyTypes.includes(p.propertyType)&&miles!==null&&miles<=box.radiusMiles;
   }
-  function screening(price,arv,box=defaults){
+  const Model=(typeof module==='object'&&module.exports)?require('./deal-model.js'):globalThis.DealModel;
+  function screening(price,arv,box=defaults,assumptions){
     if(!Number.isFinite(arv)||arv<=0||!Number.isFinite(price)||price<=0)return null;
-    const headroom=Math.floor(arv*(1-0.1025)-price*1.035-box.minProfit);
+    const headroom=Model.maxRehab({purchasePrice:price,arv,assumptions:Object.assign({},assumptions||{},{targetProfit:box.minProfit})});
     return {maxRehabAtTarget:Math.max(0,Math.min(box.maxRehab,headroom)),
       headroomBeforeCap:headroom,supportsFullRehabCap:headroom>=box.maxRehab,
       meetsTargetBeforeRehab:headroom>=0};

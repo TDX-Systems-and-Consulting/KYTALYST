@@ -77,9 +77,10 @@
   </main>
   <footer class="site-footer"><span class="footer-brand">KYTALYST <i>by TDX Systems &amp; Consulting</i></span><span>Better numbers. Clearer decisions.</span></footer>
 
-<script src="buy-box.js?v=discovery-1"></script>
+<script src="deal-model.js?v=model-1"></script>
+<script src="buy-box.js?v=model-1"></script>
 <script src="valuation.js?v=discovery-1"></script>
-<script src="rehab-budget.js?v=profit-30000"></script>
+<script src="rehab-budget.js?v=model-1"></script>
 <script>
 // --- Light/Dark theme toggle (same pattern as JOBSpan) ---
 function applyTheme(theme){
@@ -104,6 +105,13 @@ let hipshotAmount = '';
 let hipshotSaved = false;
 let budgetStorageMessage = '';
 let autocompleteElement = null;
+const ASSUMPTIONS_KEY = 'kytalyst-assumptions-v1';
+let dealAssumptions = Object.assign({}, DealModel.defaults);
+try {
+  const savedAssumptions = JSON.parse(localStorage.getItem(ASSUMPTIONS_KEY) || 'null');
+  if (savedAssumptions) dealAssumptions = DealModel.normalize(savedAssumptions);
+} catch (_) { dealAssumptions = Object.assign({}, DealModel.defaults); }
+function targetProfit(){ return Number(dealAssumptions.targetProfit); }
 
 function escapeHtml(value){
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -194,7 +202,7 @@ function applyAnalysisInputs(){
   try {
     const listPrice = document.getElementById('analysisPrice').value;
     const arv = document.getElementById('analysisArv').value;
-    RehabBudget.evaluate({listPrice,arv,rehabTotal:0,wantedProfit:BuyBox.defaults.minProfit});
+    RehabBudget.evaluate({listPrice,arv,rehabTotal:0,assumptions:dealAssumptions});
     lastScanData.listPrice = Number(listPrice);
     lastScanData.arv = Number(arv);
     lastScanData.arvOverridden = Number(arv) !== lastScanData.valuation?.arv;
@@ -207,7 +215,7 @@ function refreshDealMetrics(){
   let deal = null;
   try {
     range = RehabBudget.hipshot(hipshotAmount);
-    if (hipshotSaved) deal = RehabBudget.evaluate({listPrice:lastScanData.listPrice,arv:lastScanData.arv,rehabTotal:range.amount,wantedProfit:BuyBox.defaults.minProfit});
+    if (hipshotSaved) deal = RehabBudget.evaluate({listPrice:lastScanData.listPrice,arv:lastScanData.arv,rehabTotal:range.amount,assumptions:dealAssumptions});
   } catch (_) {}
   const overRehabCap = !!(deal && range.amount > BuyBox.defaults.maxRehab);
   if (overRehabCap) deal.isDeal = false;
@@ -235,19 +243,116 @@ function updateDealVisuals(deal, range){
     allocation.innerHTML = '<p class="budget-note">Save a Hipshot to reveal your cost breakdown.</p>';
     return;
   }
-  const profitTarget = BuyBox.defaults.minProfit;
+  const profitTarget = deal.assumptions.targetProfit;
   const difference = deal.projectedProfit - profitTarget;
   target.textContent = difference >= 0 ? money(difference) + ' above your ' + money(profitTarget) + ' target' : money(-difference) + ' below your ' + money(profitTarget) + ' target';
   fill.style.width = Math.max(0, Math.min(100, deal.projectedProfit / profitTarget * 100)) + '%';
   const parts = [
-    {name:'Purchase + closing',value:lastScanData.listPrice * 1.035,kind:'purchase'},
-    {name:'Hipshot rehab',value:range.amount,kind:'rehab'},
-    {name:'Resale deductions',value:lastScanData.arv * 0.1025,kind:'selling'},
+    {name:'Purchase',value:deal.purchasePrice,kind:'purchase'},
+    {name:'Buy closing',value:deal.buyClosing,kind:'closing'},
+    {name:'Hipshot rehab',value:deal.rehab,kind:'rehab'},
+    {name:'Financing',value:deal.financingCost,kind:'financing'},
+    {name:'Holding',value:deal.holdingCost,kind:'holding'},
+    {name:'Selling costs',value:deal.sellingCosts,kind:'selling'},
     {name:deal.projectedProfit >= 0 ? 'Projected profit' : 'Projected loss',value:deal.projectedProfit,kind:deal.projectedProfit >= 0 ? 'profit' : 'loss'}
   ];
   const total = parts.reduce((sum,p) => sum + Math.max(0,p.value),0);
+  const a = deal.assumptions;
+  const pct = n => Number(n).toLocaleString('en-US',{maximumFractionDigits:2}) + '%';
+  const lines = [
+    ['Purchase price', deal.purchasePrice],
+    ['Buy closing costs · ' + pct(a.buyClosingPct) + ' of purchase', deal.buyClosing],
+    ['Hipshot rehab', deal.rehab],
+    a.financing === 'hardMoney' ? ['Loan points · ' + pct(a.pointsPct) + ' of ' + money(deal.loanAmount) + ' loan', deal.points] : null,
+    a.financing === 'hardMoney' ? ['Loan interest · ' + pct(a.interestRatePct) + ' for ' + a.holdMonths + ' mo', deal.interest] : null,
+    ['Holding · ' + money(a.monthlyHolding) + '/mo × ' + a.holdMonths + ' mo', deal.holdingCost],
+    ['Agent commissions · ' + pct(a.commissionPct) + ' of ARV', deal.commissions],
+    ['Buyer concessions · ' + pct(a.concessionsPct) + ' of ARV', deal.concessions],
+    ['Seller title & closing · ' + pct(a.sellerClosingPct) + ' of ARV', deal.sellerClosing]
+  ].filter(Boolean);
   allocation.innerHTML = '<div class="allocation-bar" aria-hidden="true">' + parts.filter(p=>p.value>0).map(p=>`<span class="allocation-${p.kind}" style="width:${p.value / total * 100}%"></span>`).join('') + '</div>' +
-    '<div class="allocation-legend">' + parts.map(p=>`<div><span><i class="allocation-${p.kind}"></i>${p.name}</span><strong>${money(p.value)}</strong></div>`).join('') + '</div>';
+    '<div class="allocation-legend">' + parts.map(p=>`<div><span><i class="allocation-${p.kind}"></i>${p.name}</span><strong>${money(p.value)}</strong></div>`).join('') + '</div>' +
+    '<div class="deal-ledger" id="dealLedger"><div class="ledger-head"><span>ARV (sale price)</span><strong>' + money(deal.arv) + '</strong></div>' +
+    lines.map(([label,value]) => `<div><span>${escapeHtml(label)}</span><strong>− ${money(value)}</strong></div>`).join('') +
+    '<div class="ledger-total"><span>Projected profit</span><strong id="ledgerProfit">' + money(deal.projectedProfit) + '</strong></div></div>' +
+    '<div class="cash-strip"><div><span>Cash you bring</span><strong id="cashNeeded">' + money(deal.cashNeeded) + '</strong></div><div><span>Return on your cash</span><strong id="returnOnCash">' + (deal.returnOnCash === null ? '—' : pct(deal.returnOnCash)) + '</strong></div><div><span>' + (a.financing === 'hardMoney' ? 'Hard money loan' : 'Financing') + '</span><strong>' + (a.financing === 'hardMoney' ? money(deal.loanAmount) : 'All cash') + '</strong></div></div>';
+}
+
+function assumptionInput(key, label, step, prefix){
+  return `<label>${label}<input id="as_${key}" data-assumption="${key}" type="number" min="0" step="${step}" inputmode="decimal" value="${escapeHtml(dealAssumptions[key])}"></label>`;
+}
+function renderAssumptions(){
+  const hm = dealAssumptions.financing === 'hardMoney';
+  return `
+    <section class="section assumptions-section" id="assumptionsSection">
+      <div class="section-head"><span>Deal assumptions</span><span class="section-tag">Saved as your defaults</span></div>
+      <div class="assumption-groups">
+        <fieldset><legend>Goal &amp; buying</legend>
+          ${assumptionInput('targetProfit','Target profit ($)','1000')}
+          ${assumptionInput('buyClosingPct','Buy closing costs (% of purchase)','0.05')}
+        </fieldset>
+        <fieldset><legend>Financing</legend>
+          <label>How you fund it<select id="as_financing" data-assumption="financing" onchange="toggleFinancingFields(this.value)">
+            <option value="hardMoney" ${hm ? 'selected' : ''}>Hard money loan</option>
+            <option value="cash" ${hm ? '' : 'selected'}>All cash</option>
+          </select></label>
+          <div id="loanFields" ${hm ? '' : 'hidden'}>
+            ${assumptionInput('loanToPurchasePct','Loan % of purchase','1')}
+            ${assumptionInput('rehabFinancedPct','Loan % of rehab','1')}
+            ${assumptionInput('interestRatePct','Interest rate (% per year)','0.25')}
+            ${assumptionInput('pointsPct','Points (%)','0.25')}
+          </div>
+        </fieldset>
+        <fieldset><legend>Holding</legend>
+          ${assumptionInput('holdMonths','Months held (buy to resale close)','0.5')}
+          ${assumptionInput('monthlyHolding','Taxes + insurance + utilities ($/month)','25')}
+        </fieldset>
+        <fieldset><legend>Selling (% of ARV)</legend>
+          ${assumptionInput('commissionPct','Agent commissions (%)','0.25')}
+          ${assumptionInput('concessionsPct','Buyer concessions (%)','0.25')}
+          ${assumptionInput('sellerClosingPct','Seller title &amp; closing (%)','0.05')}
+        </fieldset>
+      </div>
+      <div class="assumption-actions">
+        <button type="button" class="budget-btn" id="saveAssumptionsBtn" onclick="saveAssumptions()">Save assumptions</button>
+        <button type="button" class="budget-btn secondary" onclick="resetAssumptions()">Reset to defaults</button>
+      </div>
+      <div id="assumptionsError" class="budget-error" role="alert"></div>
+      <p id="assumptionsStatus" class="budget-note" role="status"></p>
+    </section>`;
+}
+function toggleFinancingFields(value){
+  const el = document.getElementById('loanFields');
+  if (el) el.hidden = value !== 'hardMoney';
+}
+function readAssumptionForm(){
+  const next = {};
+  document.querySelectorAll('[data-assumption]').forEach(el => { next[el.dataset.assumption] = el.value; });
+  return DealModel.normalize(next);
+}
+function persistAssumptions(){
+  try { localStorage.setItem(ASSUMPTIONS_KEY, JSON.stringify(dealAssumptions)); return true; } catch (_) { return false; }
+}
+function saveAssumptions(){
+  try {
+    dealAssumptions = readAssumptionForm();
+    const stored = persistAssumptions();
+    if (typeof onAssumptionsSaved === 'function') onAssumptionsSaved(dealAssumptions);
+    document.getElementById('assumptionsError').textContent = '';
+    document.getElementById('assumptionsStatus').textContent = stored ? 'Saved. Every deal now uses these numbers.' : 'Applied for this visit; browser storage is unavailable.';
+    refreshDealMetrics();
+  } catch (err) {
+    document.getElementById('assumptionsError').textContent = err.message;
+  }
+}
+function resetAssumptions(){
+  dealAssumptions = Object.assign({}, DealModel.defaults);
+  persistAssumptions();
+  if (typeof onAssumptionsSaved === 'function') onAssumptionsSaved(dealAssumptions);
+  const section = document.getElementById('assumptionsSection');
+  if (section) section.outerHTML = renderAssumptions();
+  document.getElementById('assumptionsStatus').textContent = 'Back to the standard defaults.';
+  refreshDealMetrics();
 }
 
 function renderBudget(){
@@ -490,7 +595,7 @@ function renderResults(){
       </div>
       <button class="budget-btn secondary" onclick="applyAnalysisInputs()">Update analysis inputs</button>
       <div id="analysisError" class="budget-error" role="alert"></div>
-      <details class="assumptions"><summary>Model assumptions &amp; valuation notes</summary><p>ARV is the median of 3 comp listing prices adjusted to the subject’s square footage. Renovated condition and sold prices are not verified. This model uses a $30,000 profit target, 3.5% acquisition closing costs, and 10.25% resale deductions. Review financing, holding costs, commissions, and taxes for your deal.</p></details>
+      <details class="assumptions"><summary>Valuation notes</summary><p>ARV is the median of 3 comp listing prices adjusted to the subject’s square footage. Renovated condition and sold prices are not verified. Financing, holding and selling costs come from your deal assumptions below the breakdown. Income taxes on the profit are not included.</p></details>
     </section>`;
 
   const GKEY = "AIzaSyBBJGJy8fxsb5C63eCXQnq1MN14OX8D5-0";
@@ -526,6 +631,8 @@ function renderResults(){
       <div class="section-head"><span><i class="section-number">03</i> The deal, at a glance</span><span class="section-tag">Follow the money</span></div>
       <div id="dealAllocation" class="allocation-content"><p class="budget-note">Save a Hipshot to reveal your cost breakdown.</p></div>
     </section>
+
+    ${renderAssumptions()}
 
     <section class="section signals-section">
       <div class="section-head"><span>Listing signals</span><span class="section-tag">${escapeHtml(data.rehabTier)} rehab tier</span></div>
