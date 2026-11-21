@@ -6,7 +6,7 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 // --- Access control -------------------------------------------------------
 // Every scan costs RentCast + Anthropic credits, so only signed-in KYTALYST
 // users from approved web addresses may run one, with a daily cap per user.
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://tdx-kytalyst.com,https://www.tdx-kytalyst.com')
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://kytalyst.com,https://www.kytalyst.com,https://tdx-kytalyst.com,https://www.tdx-kytalyst.com')
   .split(',').map(s => s.trim()).filter(Boolean);
 const SCAN_DAILY_LIMIT = Number(process.env.SCAN_DAILY_LIMIT || 50);
 const REQUIRE_AUTH = process.env.REQUIRE_AUTH !== 'false';

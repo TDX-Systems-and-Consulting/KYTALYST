@@ -82,6 +82,7 @@ test('preflight only answers approved web addresses', async () => {
   assert.equal(ok.status, 204);
   assert.equal(ok.headers['Access-Control-Allow-Origin'], 'https://tdx-kytalyst.com');
   assert.match(ok.headers['Access-Control-Allow-Headers'], /Authorization/);
+  assert.equal((await call({ method: 'OPTIONS', origin: 'https://kytalyst.com' })).status, 204);
   const bad = await call({ method: 'OPTIONS', origin: 'https://evil.example' });
   assert.equal(bad.status, 403);
   assert.equal(bad.headers['Access-Control-Allow-Origin'], undefined);
