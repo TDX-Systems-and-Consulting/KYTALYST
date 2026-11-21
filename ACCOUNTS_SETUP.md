@@ -18,19 +18,19 @@ You enter every credential and secret yourself; none go in code or chat.
    ```sh
    git clone -b feature/deal-model-v2 https://github.com/TDX-Systems-and-Consulting/KYTALYST.git
    cd KYTALYST
-   gcloud config set project <kytalyst-project-id>
+   gcloud config set project kytalyst-ac77f
    gcloud services enable secretmanager.googleapis.com cloudfunctions.googleapis.com run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
    ```
 3. Add your two keys (you paste them; nothing shows on screen and nothing is saved in a file):
    ```sh
    read -rs -p "Paste RentCast key, then Enter: " K && printf %s "$K" | gcloud secrets create RENTCAST_API_KEY --data-file=- ; echo
    read -rs -p "Paste Anthropic key, then Enter: " K && printf %s "$K" | gcloud secrets create ANTHROPIC_API_KEY --data-file=- ; unset K; echo
-   PROJECT_NUMBER=$(gcloud projects describe <kytalyst-project-id> --format='value(projectNumber)')
+   PROJECT_NUMBER=$(gcloud projects describe kytalyst-ac77f --format='value(projectNumber)')
    for S in RENTCAST_API_KEY ANTHROPIC_API_KEY; do
      gcloud secrets add-iam-policy-binding $S --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" --role=roles/secretmanager.secretAccessor
    done
    ```
-4. Deploy: `bash deploy-function.sh <kytalyst-project-id>` — it prints the new function URL. Later redeploys: open Cloud Shell, `cd KYTALYST`, run the same line (it pulls the latest code first).
+4. Deploy: `bash deploy-function.sh kytalyst-ac77f` — it prints the new function URL. Later redeploys: open Cloud Shell, `cd KYTALYST`, run the same line (it pulls the latest code first).
 
 ## 3. Connect the site
 Edit `kytalyst-config.js`: paste the `firebaseConfig` object as `firebase`, and set `scanUrl` to the new function URL. Push to `main`. GitHub Pages publishes it.

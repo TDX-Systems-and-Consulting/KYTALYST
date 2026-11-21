@@ -9,8 +9,15 @@
  * emulators: local testing only; leave null on the live site.
  */
 window.KYTALYST_CONFIG = {
-  firebase: null,
-  scanUrl: 'https://us-central1-kytrac-72d91.cloudfunctions.net/kytalystScan',
+  firebase: {
+    apiKey: 'AIzaSyAJQnegXK7u1wtOZMa-0wOpHIzDogMZG8o',
+    authDomain: 'kytalyst-ac77f.firebaseapp.com',
+    projectId: 'kytalyst-ac77f',
+    storageBucket: 'kytalyst-ac77f.firebasestorage.app',
+    messagingSenderId: '1081757518234',
+    appId: '1:1081757518234:web:b703b9745c1bde7fdb1223'
+  },
+  scanUrl: 'https://us-central1-kytalyst-ac77f.cloudfunctions.net/kytalystScan',
   emulators: null
 };
 // Resolved by account.js once the account layer (Firebase or local mode) is ready.
