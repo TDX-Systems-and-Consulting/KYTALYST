@@ -21,7 +21,7 @@
       <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 24V10l8-5 8 5v14l-8 5z"/><path d="M12 11v12m1-6 8-6m-8 6 8 6"/></svg></span>
       <span><span class="wordmark">KYTA<span>LYST</span></span><span class="tagline">A TDX investment workspace</span></span>
     </a>
-    <div class="nav-actions"><a class="daily-nav" href="daily.html">Daily matches ↗</a><span class="workspace-label"><i></i> Deal workspace</span><button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀ Light</button></div>
+    <div class="nav-actions"><a class="daily-nav" href="daily.html">Daily matches ↗</a><span class="workspace-label"><i></i> Deal workspace</span><span id="accountSlot" class="account-slot"></span><button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀ Light</button></div>
   </header>
 
   <main>
@@ -77,6 +77,9 @@
   </main>
   <footer class="site-footer"><span class="footer-brand">KYTALYST <i>by TDX Systems &amp; Consulting</i></span><span>Better numbers. Clearer decisions.</span></footer>
 
+<script src="kytalyst-config.js?v=accounts-1"></script>
+<script type="module" src="account.js?v=accounts-1"></script>
+<script src="auth-ui.js?v=accounts-1"></script>
 <script src="deal-model.js?v=model-1"></script>
 <script src="buy-box.js?v=model-1"></script>
 <script src="valuation.js?v=discovery-1"></script>
@@ -98,7 +101,7 @@ try { savedTheme = localStorage.getItem('kytalyst-theme') || 'dark'; } catch (_)
 applyTheme(savedTheme);
 
 // Live KYTALYST backend — deployed 7/15/26
-const CLOUD_FUNCTION_URL = "https://us-central1-kytrac-72d91.cloudfunctions.net/kytalystScan";
+const CLOUD_FUNCTION_URL = (window.KYTALYST_CONFIG && window.KYTALYST_CONFIG.scanUrl) || "https://us-central1-kytrac-72d91.cloudfunctions.net/kytalystScan";
 
 let lastScanData = null;
 let hipshotAmount = '';
@@ -160,6 +163,7 @@ function saveHipshot(){
     input.value = range.amount;
     hipshotSaved = true;
     saveBudget();
+    queueDealSync();
     input.blur();
     refreshBudgetSummary();
     refreshDealMetrics();
@@ -207,6 +211,7 @@ function applyAnalysisInputs(){
     lastScanData.arv = Number(arv);
     lastScanData.arvOverridden = Number(arv) !== lastScanData.valuation?.arv;
     refreshDealMetrics();
+    queueDealSync();
     document.getElementById('analysisError').textContent = '';
   } catch(err){ document.getElementById('analysisError').textContent = err.message; }
 }
@@ -341,6 +346,7 @@ function saveAssumptions(){
     document.getElementById('assumptionsError').textContent = '';
     document.getElementById('assumptionsStatus').textContent = stored ? 'Saved. Every deal now uses these numbers.' : 'Applied for this visit; browser storage is unavailable.';
     refreshDealMetrics();
+    queueDealSync();
   } catch (err) {
     document.getElementById('assumptionsError').textContent = err.message;
   }
@@ -498,9 +504,16 @@ async function findDailyProperty(address){
 }
 
 async function fetchRealScan(address){
+  const headers = { "Content-Type": "application/json" };
+  const account = window.KytAccount;
+  if (account && account.enabled) {
+    const token = await account.idToken();
+    if (!token) { const e = new Error('Sign in to scan properties'); e.status = 401; throw e; }
+    headers.Authorization = 'Bearer ' + token;
+  }
   const res = await fetch(CLOUD_FUNCTION_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ address })
   });
   if(!res.ok){
@@ -512,6 +525,145 @@ async function fetchRealScan(address){
   return await res.json();
 }
 
+// --- Account: saved deals, saved assumptions, deal status ---
+const DEAL_STATUSES = [['analyzing','Analyzing'],['watching','Watching'],['offer','Offer made'],['contract','Under contract'],['bought','Bought'],['passed','Passed']];
+let dealSyncTimer = null;
+function withTimeout(promise, ms){
+  return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out')), ms))]);
+}
+function accountReady(){
+  return window.kytAccountReady || Promise.resolve({enabled:false,user:null});
+}
+function setSaveStatus(text){
+  const el = document.getElementById('dealSaveStatus');
+  if (el) el.textContent = text;
+}
+function setDealStatus(value){
+  if (!lastScanData) return;
+  lastScanData.dealStatus = value;
+  queueDealSync();
+}
+function currentDealResults(){
+  try {
+    const range = RehabBudget.hipshot(hipshotAmount);
+    if (!hipshotSaved) return null;
+    const d = RehabBudget.evaluate({listPrice:lastScanData.listPrice,arv:lastScanData.arv,rehabTotal:range.amount,assumptions:dealAssumptions});
+    return {projectedProfit:d.projectedProfit,mao:d.mao,cashNeeded:d.cashNeeded,returnOnCash:d.returnOnCash,totalCost:d.totalCost,isDeal:d.isDeal};
+  } catch (_) { return null; }
+}
+function dealSnapshot(){
+  const d = lastScanData;
+  const scanKeys = ['address','listPrice','arv','providerEstimate','sqft','yearBuilt','beds','baths','propertyType','listingStatus','listingNotFound','_isFSBO','rehabTier','distressSignals','comps','valuation','agentName','officeName','agentPhone','agentEmail'];
+  const scan = {};
+  scanKeys.forEach(k => { if (d[k] !== undefined) scan[k] = d[k]; });
+  scan.listPrice = d.scanListPrice ?? d.listPrice;
+  scan.arv = d.valuation?.arv ?? d.arv;
+  return JSON.parse(JSON.stringify({
+    address: d.address,
+    status: d.dealStatus || 'analyzing',
+    purchasePrice: Number(d.listPrice) || 0,
+    arv: Number(d.arv) || 0,
+    arvOverridden: !!d.arvOverridden,
+    hipshot: hipshotSaved && hipshotAmount !== '' ? Number(hipshotAmount) : null,
+    assumptions: dealAssumptions,
+    results: currentDealResults(),
+    scan
+  }));
+}
+function queueDealSync(){
+  if (!lastScanData || !lastScanData.address) return;
+  const account = window.KytAccount;
+  if (!account || !account.enabled || !account.user) return;
+  setSaveStatus('Saving…');
+  clearTimeout(dealSyncTimer);
+  dealSyncTimer = setTimeout(syncDealNow, 500);
+}
+async function syncDealNow(){
+  const account = window.KytAccount;
+  if (!account || !account.user || !lastScanData) return;
+  try {
+    await account.saveDeal(dealSnapshot());
+    setSaveStatus('Saved to My deals');
+  } catch (err) {
+    console.warn('Deal save failed:', err);
+    setSaveStatus('Not saved — check your connection.');
+  }
+}
+async function restoreSavedDeal(data){
+  const account = await accountReady();
+  data.scanListPrice = data.listPrice;
+  if (!account.enabled || !account.user) return null;
+  let saved = null;
+  try { saved = await withTimeout(account.getDeal(account.dealId(data.address)), 5000); } catch (err) { console.warn('Saved deal unavailable:', err); }
+  if (!saved) return null;
+  data.dealStatus = saved.status || 'analyzing';
+  if (saved.hipshot !== null && saved.hipshot !== undefined) {
+    hipshotAmount = Number(saved.hipshot); hipshotSaved = true;
+    budgetStorageMessage = 'Restored from My deals.';
+  }
+  if (saved.purchasePrice && saved.scan && Number(saved.purchasePrice) !== Number(saved.scan.listPrice)) data.listPrice = Number(saved.purchasePrice);
+  if (saved.arvOverridden && saved.arv) { data.arv = Number(saved.arv); data.arvOverridden = true; }
+  return saved;
+}
+async function openSavedDeal(id){
+  const statusLine = document.getElementById('statusLine');
+  const account = await accountReady();
+  if (!account.enabled) { statusLine.textContent = 'Saved deals need sign-in, which is not set up yet.'; return; }
+  if (!account.user && !(await KytAuthUI.requireSignIn('Sign in to open your saved deal.'))) { statusLine.textContent = 'Sign in to open this deal.'; return; }
+  statusLine.textContent = 'Opening your saved deal…';
+  let saved = null;
+  try { saved = await account.getDeal(id); } catch (err) { console.warn(err); }
+  if (!saved || !saved.scan) { statusLine.textContent = 'That deal was not found in My deals.'; return; }
+  const data = Object.assign({}, saved.scan);
+  data.address = saved.address;
+  data.scanListPrice = saved.scan.listPrice;
+  data.listPrice = Number(saved.purchasePrice) || Number(saved.scan.listPrice) || 0;
+  data.arv = Number(saved.arv) || Number(saved.scan.arv) || 0;
+  data.arvOverridden = !!saved.arvOverridden;
+  data.dealStatus = saved.status || 'analyzing';
+  hipshotAmount = saved.hipshot === null || saved.hipshot === undefined ? '' : Number(saved.hipshot);
+  hipshotSaved = hipshotAmount !== '';
+  budgetStorageMessage = hipshotSaved ? 'Restored from My deals.' : '';
+  lastScanData = data;
+  document.getElementById('addressInput').value = saved.address;
+  document.getElementById('emptyState').style.display = 'none';
+  const savedAt = saved.updatedAt ? new Date(saved.updatedAt).toLocaleDateString('en-US') : '';
+  statusLine.textContent = 'Saved deal' + (savedAt ? ' from ' + savedAt : '') + '. Property data is from that scan — tap Scan to refresh it.';
+  renderResults();
+  setSaveStatus('Saved to My deals');
+}
+function exportDealPdf(){
+  if (!lastScanData) return;
+  const title = document.title;
+  document.title = 'KYTALYST - ' + String(lastScanData.address).replace(/[\\/:*?"<>|]+/g, ' ');
+  window.print();
+  setTimeout(() => { document.title = title; }, 500);
+}
+document.addEventListener('kyt-account-ready', e => {
+  const account = e.detail;
+  if (!account.enabled) return;
+  account.onChange(async user => {
+    if (!user) return;
+    try {
+      const profile = await account.getProfile();
+      if (profile && profile.assumptions) {
+        dealAssumptions = DealModel.normalize(profile.assumptions);
+        persistAssumptions();
+        const section = document.getElementById('assumptionsSection');
+        if (section) section.outerHTML = renderAssumptions();
+        if (lastScanData) refreshDealMetrics();
+      } else {
+        await account.saveAssumptions(dealAssumptions);
+      }
+    } catch (err) { console.warn('Saved assumptions unavailable:', err); }
+    if (lastScanData) queueDealSync();
+  });
+});
+function onAssumptionsSaved(assumptions){
+  const account = window.KytAccount;
+  if (account && account.enabled && account.user) account.saveAssumptions(assumptions).catch(err => console.warn('Assumptions not saved to account:', err));
+}
+
 async function runScan(){
   const address = document.getElementById('addressInput').value.trim();
   if(!address) {
@@ -520,6 +672,11 @@ async function runScan(){
   }
   const btn = document.getElementById('scanBtn');
   const statusLine = document.getElementById('statusLine');
+  const account = await accountReady();
+  if (account.enabled && !account.user) {
+    const user = await KytAuthUI.requireSignIn('Sign in to scan properties and keep your deals on every device.');
+    if (!user) { statusLine.textContent = 'Sign in to scan this property.'; return; }
+  }
   btn.disabled = true;
   btn.classList.add('is-loading');
   document.body.classList.add('is-scanning');
@@ -543,6 +700,7 @@ async function runScan(){
     data.valuation = valuation;
     data.address = data.address || address;
     loadBudget(data.address);
+    await restoreSavedDeal(data);
     // Backend now returns 200 even for FSBO/off-market — check the flag
     if (data.listingNotFound) {
       statusLine.textContent = "";
@@ -574,6 +732,7 @@ async function runScan(){
   const manualBtn = document.getElementById('fsboManualBtn');
   if (manualBtn) manualBtn.style.display = 'block';
   renderResults();
+  queueDealSync();
 }
 
 function renderResults(){
@@ -604,6 +763,7 @@ function renderResults(){
 
   const wrap = document.getElementById('resultsWrap');
   wrap.innerHTML = `
+    <div class="print-header" aria-hidden="true"><strong>KYTALYST deal sheet</strong><span>${escapeHtml(new Date().toLocaleDateString('en-US',{dateStyle:'long'}))}</span></div>
     <section id="verdictBanner" class="verdict-banner pending" aria-label="Deal overview">
       <div class="property-summary">
         <div class="section-kicker">Property / opportunity overview</div>
@@ -611,6 +771,11 @@ function renderResults(){
         <div class="property-badges"><span id="verdictWord" class="verdict-word">HIPSHOT NEEDED</span>
           ${fsboBadge}
           ${!data._isFSBO ? `<span class="status-badge ${data.listingStatus === 'Active' ? 'active' : 'inactive'}">${data.listingStatus === 'Active' ? 'Active on Market' : escapeHtml(data.listingStatus)}</span>` : ''}
+        </div>
+        <div class="deal-tools">
+          ${window.KytAccount && window.KytAccount.enabled ? `<label class="deal-status-label">Deal status<select id="dealStatus" onchange="setDealStatus(this.value)">${DEAL_STATUSES.map(([v,l])=>`<option value="${v}" ${(data.dealStatus||'analyzing')===v?'selected':''}>${l}</option>`).join('')}</select></label>` : ''}
+          <button type="button" class="budget-btn secondary export-btn" onclick="exportDealPdf()">Export PDF</button>
+          <span id="dealSaveStatus" class="budget-note deal-save-status" role="status"></span>
         </div>
       </div>
       <div class="verdict-profit"><span class="profit-label">The projected upside</span><div class="num" id="projectedProfit" aria-live="polite">—</div><div class="profit-target" id="profitTarget">Save your Hipshot to see the numbers.</div><div class="target-track" aria-hidden="true"><span id="targetFill"></span></div></div>
@@ -679,8 +844,11 @@ function renderResults(){
 }
 document.getElementById('buyBoxPreview').textContent = `${BuyBox.defaults.zipCode} + ${BuyBox.defaults.radiusMiles} miles · up to ${money(BuyBox.defaults.maxPrice)} · ${BuyBox.defaults.minBeds}+ beds / ${BuyBox.defaults.minBaths}+ bath`;
 // Daily shortlist links also work when Google Maps is unavailable.
+const openDealId = new URLSearchParams(window.location.search).get('deal');
 const prefillAddress = new URLSearchParams(window.location.search).get('address');
-if (prefillAddress) {
+if (openDealId) {
+  openSavedDeal(openDealId);
+} else if (prefillAddress) {
   document.getElementById('addressInput').value = prefillAddress;
   runScan();
 }

@@ -40,3 +40,74 @@ main{max-width:1240px;margin:auto;padding:0 40px}.intro{display:grid;grid-templa
 .assumption-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 @media(max-width:1000px){.assumption-groups{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.assumption-groups,.cash-strip{grid-template-columns:1fr}.assumptions-section{padding:20px}}
+/* accounts */
+.account-slot{display:flex;align-items:center;gap:14px;margin-right:14px}.account-slot:empty{display:none}
+.account-btn{border:1px solid var(--copper);background:transparent;color:var(--copper-bright);border-radius:25px;padding:8px 15px;font-size:12px;font-weight:600;white-space:nowrap}
+.account-note{font-size:10px;color:var(--muted)}
+.account-menu{position:relative}.account-menu summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:25px;padding:8px 13px;font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-menu summary::-webkit-details-marker{display:none}
+.account-menu>div{position:absolute;right:0;top:calc(100% + 8px);z-index:20;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:210px;box-shadow:var(--shadow)}
+.account-menu>div span{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.account-menu button,.link-btn{background:none;border:0;color:var(--copper-bright);padding:0;text-align:left;font-size:12px}
+.auth-overlay{position:fixed;inset:0;z-index:100;background:#0008;display:flex;align-items:center;justify-content:center;padding:18px}
+.auth-card{position:relative;width:100%;max-width:400px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px 26px;box-shadow:var(--shadow);max-height:calc(100vh - 36px);overflow:auto}
+.auth-card h2{margin:6px 0 6px;font-size:24px}
+.auth-card form{display:flex;flex-direction:column;gap:12px}
+.auth-card label{display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--muted);font-weight:500}
+.auth-card input{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:9px;color:var(--paper);font-size:16px;padding:12px 13px}
+.auth-close{position:absolute;top:12px;right:14px;background:none;border:0;color:var(--muted);font-size:24px;line-height:1}
+.auth-google{width:100%;min-height:44px;border:1px solid var(--line);background:var(--surface);color:var(--paper);border-radius:8px;font-size:13px;font-weight:600;margin-top:12px}
+.auth-divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--muted);font-size:11px}.auth-divider:before,.auth-divider:after{content:'';flex:1;border-top:1px solid var(--line)}
+.auth-links{display:flex;justify-content:space-between;gap:12px;margin-top:12px}.auth-links button{background:none;border:0;color:var(--copper-bright);font-size:12px;padding:4px 0}
+/* deal tools in the overview */
+.deal-tools{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-top:18px}
+.deal-status-label{display:flex;flex-direction:column;gap:5px;font-size:10px;color:var(--muted)}
+.deal-status-label select{background:var(--surface);border:1px solid var(--line);border-radius:7px;color:var(--paper);padding:9px 10px;font-size:14px}
+.export-btn{min-height:40px;padding:9px 14px}.deal-save-status{margin:0;align-self:center}
+/* my deals */
+.deals-toolbar{display:flex;flex-wrap:wrap;gap:14px;margin:14px 0}
+.deals-toolbar label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--muted)}
+.deals-toolbar select{background:var(--surface);border:1px solid var(--line);border-radius:7px;color:var(--paper);padding:10px;font-size:15px;min-width:170px}
+.deals-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.deal-card{border:1px solid var(--line);border-radius:14px;padding:22px;background:var(--card);min-width:0}
+.deal-card h2{font-size:18px;margin:12px 0 14px;overflow-wrap:anywhere}
+.deal-card-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.deal-card-top .budget-note{margin:0 0 0 auto}
+.deal-pill{font-size:11px;font-weight:600;color:var(--copper-bright);border:1px solid var(--copper);border-radius:20px;padding:3px 10px}
+.deal-figures{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.deal-figures span{display:block;font-size:10px;color:var(--muted)}.deal-figures strong{font-size:16px;font-weight:550;font-variant-numeric:tabular-nums}
+.deal-figures .pos{color:var(--green)}.deal-figures .neg{color:var(--red)}
+.deal-card-actions{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+.print-header{display:none}
+@media(max-width:700px){.deals-list{grid-template-columns:1fr}.account-slot{gap:10px;margin-right:8px}.deal-figures{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* PDF export / print: one clean deal sheet */
+@media print{
+  :root,:root[data-theme]{--ink:#fff;--paper:#111;--card:#fff;--surface:#f4f4f1;--line:#ccc;--muted:#555;--copper:#a44e24;--copper-bright:#a44e24;--green:#2f6a1f;--red:#a3341f}
+  body{background:#fff;color:#111;font-size:11px}body:before{display:none}
+  .topbar,.intro,.workflow,.scan-card,.scan-section,#statusLine,#fsboManualBtn,.empty-state,.site-footer,.hipshot-section .budget-btn,.inputs-section .budget-btn,.assumption-actions,.deal-tools,#assumptionsError,#assumptionsStatus,.comp-photo,.agent-actions,details.assumptions,.target-track{display:none!important}
+  main>*:not(#resultsWrap){display:none!important}
+  .print-header{display:flex!important;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:10px;font-size:12px}
+  .section,.verdict-banner,.allocation-section,.assumptions-section,.metric-cell{break-inside:avoid;box-shadow:none!important;background:#fff!important}
+  .verdict-banner{margin-top:0;padding:14px 16px}.analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  input,select{border:0!important;background:none!important;padding:0!important;font-size:12px!important}
+  .assumption-groups{grid-template-columns:repeat(4,1fr)!important}
+  @page{margin:12mm}
+}
+/* mobile header with account controls: wrap onto a second row instead of overflowing */
+@media(max-width:700px){
+  .topbar{flex-wrap:wrap;row-gap:12px}
+  .nav-actions{flex-wrap:wrap;justify-content:flex-end;gap:10px 12px;margin-left:auto;max-width:100%}
+  .nav-actions .daily-nav{font-size:11px}
+  .account-slot{margin-right:0}
+  .account-menu>div{right:auto;left:0}
+}
+@media(max-width:420px){.nav-actions{width:100%;justify-content:space-between}.account-menu>div{left:auto;right:0}}
+@media print{
+  .analysis-grid,.assumptions-section,.allocation-legend,.allocation-section .section-head .section-tag{display:none!important}
+  .verdict-banner{grid-template-columns:1.4fr 1fr;gap:16px;padding:12px 14px;border-radius:8px}
+  .verdict-profit .num{font-size:32px}
+  .metrics-grid{margin-top:8px}.metric-cell{padding:8px 10px}
+  .allocation-section{padding:12px 14px;margin-top:8px;border-radius:8px}.allocation-bar{margin:6px 0 8px;height:12px}
+  .deal-ledger{margin-top:6px}.deal-ledger>div{padding:4px 0;font-size:11px}
+  .cash-strip{margin-top:8px}.cash-strip>div{padding:6px 10px}.cash-strip strong{font-size:14px}
+  .signals-section,.comps-section{margin-top:8px;padding:10px 0}.comps-grid{grid-template-columns:repeat(3,1fr)!important}
+}

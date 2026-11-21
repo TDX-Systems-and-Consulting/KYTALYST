@@ -1,4 +1,53 @@
 const { http } = require('@google-cloud/functions-framework');
+const { initializeApp, getApps } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+
+// --- Access control -------------------------------------------------------
+// Every scan costs RentCast + Anthropic credits, so only signed-in KYTALYST
+// users from approved web addresses may run one, with a daily cap per user.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://tdx-kytalyst.com,https://www.tdx-kytalyst.com')
+  .split(',').map(s => s.trim()).filter(Boolean);
+const SCAN_DAILY_LIMIT = Number(process.env.SCAN_DAILY_LIMIT || 50);
+const REQUIRE_AUTH = process.env.REQUIRE_AUTH !== 'false';
+
+function firebase() {
+  if (!getApps().length) initializeApp();
+  return { auth: getAuth(), db: getFirestore() };
+}
+function originAllowed(origin) {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  return process.env.ALLOW_LOCALHOST === 'true' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+}
+function centralDate(now = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+async function authorize(req) {
+  if (!REQUIRE_AUTH) return { uid: 'anonymous' };
+  const match = /^Bearer (.+)$/.exec(req.get('Authorization') || '');
+  if (!match) throw Object.assign(new Error('Sign in to scan properties'), { status: 401 });
+  try {
+    const decoded = await firebase().auth.verifyIdToken(match[1]);
+    return { uid: decoded.uid, email: decoded.email || '' };
+  } catch (_) {
+    throw Object.assign(new Error('Your sign-in expired. Sign in again.'), { status: 401 });
+  }
+}
+async function countScan(user) {
+  if (!REQUIRE_AUTH) return;
+  const { db } = firebase();
+  const ref = db.collection('usage').doc(user.uid).collection('days').doc(centralDate());
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const used = snap.exists ? Number(snap.get('scans')) || 0 : 0;
+    if (used >= SCAN_DAILY_LIMIT) {
+      throw Object.assign(new Error(`Daily scan limit reached (${SCAN_DAILY_LIMIT}). It resets at midnight Central.`), { status: 429 });
+    }
+    tx.set(ref, { scans: FieldValue.increment(1), email: user.email || '', lastScanAt: FieldValue.serverTimestamp() }, { merge: true });
+  });
+}
+
 
 const DISTRESS_SYSTEM_PROMPT = `You are a distress-signal detector for real estate listings. You will receive a property description. Your only job is to output JSON, nothing else.
 
@@ -117,21 +166,39 @@ function filterComps(comparables, subjectSqft, subjectBeds, subjectBaths) {
 }
 
 http('kytalystScan', async (req, res) => {
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type');
-
+  const origin = req.get('Origin');
+  res.set('Vary', 'Origin');
+  if (originAllowed(origin)) {
+    res.set('Access-Control-Allow-Origin', origin);
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.set('Access-Control-Max-Age', '3600');
+  }
   if (req.method === 'OPTIONS') {
-    res.status(204).send('');
+    res.status(originAllowed(origin) ? 204 : 403).send('');
+    return;
+  }
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Use POST' });
+    return;
+  }
+  if (!originAllowed(origin)) {
+    res.status(403).json({ error: 'This web address may not use the KYTALYST scanner' });
     return;
   }
 
   try {
-    const { address } = req.body || {};
+    const user = await authorize(req);
+    const address = String((req.body || {}).address || '').trim();
     if (!address) {
       res.status(400).json({ error: 'address is required' });
       return;
     }
+    if (address.length > 200) {
+      res.status(400).json({ error: 'address is too long' });
+      return;
+    }
+    await countScan(user);
 
     const rentcastHeaders = { 'X-Api-Key': process.env.RENTCAST_API_KEY, Accept: 'application/json' };
     const encodedAddr = encodeURIComponent(address);
@@ -216,6 +283,11 @@ http('kytalystScan', async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (err.status && err.status < 500) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
+    console.error('kytalystScan failed:', err);
+    res.status(500).json({ error: 'The property service is unavailable. Try again shortly.' });
   }
 });

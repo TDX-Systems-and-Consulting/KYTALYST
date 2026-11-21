@@ -25,6 +25,6 @@ The same `valuation.js` math is used by the address scanner and the daily refres
 
 These are **listing-based estimates**. They do not verify closed-sale prices or renovated condition. A comp's removed/listed date must never be presented as a closing date. RentCast AVM's independent `price` field is not used as the three-comp estimate.
 
-The daily list computes how much rehab is affordable while meeting the $30,000 modeled profit target, capped at $100,000. That is **headroom**, not a rehab estimate or proof the property needs that much work. Enter a Hipshot for the specific property to assess the deal. The existing model still deducts 3.5% acquisition closing costs and 10.25% resale deductions; account for actual financing, holding, commissions, and taxes.
+The daily list computes how much rehab is affordable while meeting the $30,000 modeled profit target, capped at $100,000. That is **headroom**, not a rehab estimate or proof the property needs that much work. Enter a Hipshot for the specific property to assess the deal. It uses the default deal assumptions in `deal-model.js` (hard money, 6-month hold, 3.5% buy closing, 10.25% selling costs); see README → Deal calculations.
 
 GitHub Actions commits `data/daily.json`, then explicitly requests a GitHub Pages build (Actions commits do not automatically retrigger workflows). Source changes remain in normal reviewed pull requests; the daily job writes only the feed. GitHub can disable scheduled workflows after prolonged repository inactivity; check Actions if the feed's displayed timestamp becomes stale.
