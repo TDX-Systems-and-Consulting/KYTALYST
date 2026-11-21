@@ -14,16 +14,35 @@ See [DAILY_SETUP.md](DAILY_SETUP.md) for one-time RentCast secret activation, sc
 2. ARV is filled automatically from three size-adjusted RentCast listing comparables. The displayed comps explain the estimate; manual ARV entry is an optional override. Renovated condition and closed-sale prices are not verified.
 3. Enter your total rehab budget in **Hipshot**. Tap **Save Hipshot** (or press Enter) to update profit and maximum offer using exactly that amount. Editing an amount hides the previous figures until saved. The two range cards show **−10%** and **+10%**, without adding either percentage to your main budget. For example, $30,000 shows $27,000–$33,000 and uses $30,000 in the main analysis.
 
-Empty or invalid Hipshots withhold the profit and maximum offer; an explicit $0 is accepted. Each property's saved estimate stays in this browser and restores when its address is scanned again. It does not sync across devices. Previously saved detailed budgets are left untouched under their original storage keys; they are not silently converted into Hipshots. Price and ARV overrides apply to the current scan only.
+Empty or invalid Hipshots withhold the profit and maximum offer; an explicit $0 is accepted. Failed live requests show an error instead of sample prices. RentCast valuation comparables are labeled as unverified.
 
-There is no rehab formula, line-item editor, or extra contingency in the main analyzer. Failed live requests show an error instead of sample prices. RentCast valuation comparables are labeled as unverified.
+## Accounts and My deals
+
+Once the KYTALYST Firebase project is connected (see [ACCOUNTS_SETUP.md](ACCOUNTS_SETUP.md)), scanning requires a KYTALYST account (email/password or Google). KYTALYST accounts are separate from JobsMetrix. Each deal saves automatically to **My deals** when you save a Hipshot, change price/ARV, change assumptions or set a deal status (Analyzing, Watching, Offer made, Under contract, Bought, Passed). My deals sorts by date, profit, return on cash or price; opening a deal restores it without a paid scan. Deal assumptions follow the account to every device. **Export PDF** prints a one-deal sheet (choose "Save as PDF").
+
+Until `kytalyst-config.js` has the Firebase settings, the site runs in local mode exactly as before: no sign-in, Hipshots and assumptions saved in this browser only.
 
 ## Deal calculations
 
-Existing non-rehab assumptions: $30,000 target profit, 3.5% acquisition closing costs, 10.25% resale deductions. Check financing, holding costs, commissions, and taxes for the actual deal.
+All math lives in `deal-model.js` and is shared by the deal page, the daily feed and tests. Every assumption is editable in **Deal assumptions** and saved as your default.
 
-- Projected profit = ARV × (1 − 0.1025) − purchase price × 1.035 − Hipshot.
-- Maximum offer = (ARV × (1 − 0.1025) − Hipshot − target profit) ÷ 1.035.
+| Assumption | Default |
+|---|---|
+| Target profit | $30,000 |
+| Buy closing costs | 3.5% of purchase |
+| Financing | Hard money: 90% of purchase + 100% of rehab, 12%/yr interest-only, 2 points (or All cash) |
+| Holding | 6 months × $500/month (taxes, insurance, utilities) |
+| Agent commissions | 6% of ARV |
+| Buyer concessions | 3% of ARV |
+| Seller title & closing | 1.25% of ARV |
+
+The three selling lines are the old 10.25% "resale deductions," now labeled. Interest is charged on the full loan for the whole hold (conservative). Income taxes on profit are not included.
+
+- Loan = purchase × loan % + rehab × rehab-financed %; financing cost = loan × (points + rate × months ÷ 12).
+- Projected profit = ARV − selling costs − purchase − buy closing − rehab − financing − holding.
+- Maximum offer = the purchase price at which projected profit equals the target (solved exactly).
+- Cash you bring = everything paid out minus the loan; return on cash = profit ÷ cash you bring.
+- Daily-feed headroom = the largest rehab that still hits the target at the asking price.
 
 ## Workspace design
 
@@ -31,15 +50,14 @@ The responsive charcoal/copper workspace includes a property overview, target-pr
 
 ## Checks and publishing
 
-Requires Node.js 20+.
+Requires Node.js 22.
 
 ```sh
-npm ci
-npm test
-npx playwright install chromium
-npm run test:browser
+npm ci && (cd functions && npm ci)
+npm test                      # deal math, DOM and discovery checks
+npm run test:all              # everything, inside Firebase emulators (Java needed)
 ```
 
-Tests use property fixtures and never call paid APIs. Unit/DOM checks cover ±10% ranges, base-budget profit, edits, persistence, property isolation, validation, FSBO and failed requests. Browser checks also cover mobile overflow and the single address field with Maps loaded or unavailable. GitHub Actions saves mobile and desktop screenshots. `SCREENSHOT_DIR` optionally selects an existing screenshot folder; `CHROMIUM_PATH` selects a local Chromium binary.
+`test:all` runs: unit/DOM tests; the scan function's access control against the Auth emulator (no token, bad token, foreign website, daily cap, with RentCast/Anthropic faked); Firestore security rules; and browser checks (Hipshot flows, hard-money math by hand, sign-in gate, real Firebase sign-up/sign-in, auto-save, My deals, PDF sheet, mobile overflow). Tests never call paid APIs. GitHub Actions runs all of it on every push and saves screenshots. `CHROMIUM_PATH` selects a local Chromium; `SCREENSHOT_DIR` saves screenshots.
 
-Serve locally with `python3 -m http.server 8000`. Publish the HTML, CSS, JS modules and `data/daily.json` together. No Cloud Function redeployment is required; the backend and daily shortlist retain their existing behavior.
+The scan function deploys with `./deploy-function.sh <kytalyst-project-id>` (Node 22, 2nd gen, secrets from Secret Manager). The site publishes through GitHub Pages from `main`.

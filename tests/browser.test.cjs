@@ -11,7 +11,7 @@ const fixture = { address:'123 Test St, Wentzville, MO 63385',listPrice:160000,a
   rehab:{total:127000},comps:[250000,255000,260000].map((price,i)=>({addr:(125+i*2)+' Test St',price,beds:3,baths:2,sqft:1657})) };
 const server = http.createServer((req,res) => {
   const name = new URL(req.url,'http://localhost').pathname;
-  if (!['/','/index.html','/rehab-budget.js','/design.css','/daily.html','/buy-box.js','/valuation.js','/discovery.js','/data/daily.json'].includes(name)) {res.writeHead(404).end();return;}
+  if (!['/','/index.html','/rehab-budget.js','/deal-model.js','/design.css','/daily.html','/buy-box.js','/valuation.js','/discovery.js','/data/daily.json'].includes(name)) {res.writeHead(404).end();return;}
   res.setHeader('Content-Type', name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.json') ? 'application/json' : 'text/html');
   res.end(fs.readFileSync(path.join(root,name==='/'?'index.html':name.slice(1))));
 });
@@ -21,6 +21,8 @@ const server = http.createServer((req,res) => {
   const browser = await chromium.launch({headless:true, ...(process.env.CHROMIUM_PATH ? {executablePath:process.env.CHROMIUM_PATH} : {})});
   try {
     const context = await browser.newContext({viewport:{width:390,height:844}});
+    // Start from the original all-cash, no-holding model; hard money is switched on in the UI below.
+    await context.addInitScript(()=>{try{if(!localStorage.getItem('kytalyst-assumptions-v1'))localStorage.setItem('kytalyst-assumptions-v1',JSON.stringify({financing:'cash',monthlyHolding:0}));}catch(_){}});
     let mode = 'normal';
     let feedFixture = null;
     let backendCalls = 0;
@@ -67,7 +69,7 @@ const server = http.createServer((req,res) => {
     assert.equal(await text('#projectedProfit'),'$33,263');
     assert.equal(await page.locator('#analysisArv').inputValue(),'255000');
     assert.equal(await page.locator('.comp-row').count(),3);
-    assert.equal(await page.locator('.allocation-bar>span').count(),4);
+    assert.equal(await page.locator('.allocation-bar>span').count(),5);
     assert.match(await text('#profitTarget'),/above your/);
     await page.locator('#hipshotInput').fill('65800');
     await page.locator('#hipshotInput').press('Enter');
@@ -113,6 +115,27 @@ const server = http.createServer((req,res) => {
       await page.locator('#themeToggleBtn').click();
       await page.setViewportSize({width:390,height:844});
     }
+    // Hard money through the assumptions panel; figures checked by hand:
+    // 260,000 - (160,000 + 5,600 + 30,000 + 3,480 points + 10,440 interest + 3,000 holding + 26,650 selling) = 20,830
+    await page.locator('#analysisArv').fill('260000');
+    await page.getByRole('button',{name:'Update analysis inputs',exact:true}).click();
+    await page.locator('#as_financing').selectOption('hardMoney');
+    assert.equal(await page.locator('#as_interestRatePct').isVisible(),true);
+    await page.locator('#as_monthlyHolding').fill('500');
+    await page.getByRole('button',{name:'Save assumptions',exact:true}).click();
+    assert.equal(await text('#projectedProfit'),'$20,830');
+    assert.equal(await text('#cashNeeded'),'$38,520');
+    assert.match(await text('#dealLedger'),/Loan interest/);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
+    if(process.env.SCREENSHOT_DIR){
+      await page.locator('#dealAllocation').scrollIntoViewIfNeeded();
+      await page.screenshot({animations:'disabled',path:path.join(process.env.SCREENSHOT_DIR,'hard-money-mobile.png'),fullPage:true});
+      await page.setViewportSize({width:1280,height:900});
+      await page.screenshot({animations:'disabled',path:path.join(process.env.SCREENSHOT_DIR,'hard-money-desktop.png'),fullPage:true});
+      await page.setViewportSize({width:390,height:844});
+    }
+    await page.locator('#as_financing').selectOption('cash');await page.locator('#as_monthlyHolding').fill('0');
+    await page.getByRole('button',{name:'Save assumptions',exact:true}).click();
     mode='fsbo';await scan('200 Off Market St, MO');
     await page.locator('#fsboPriceInput').fill('100000');
     await page.getByRole('button',{name:'Analyze',exact:false}).click();
@@ -170,7 +193,7 @@ const server = http.createServer((req,res) => {
       await withMaps.screenshot({animations:'disabled',path:path.join(process.env.SCREENSHOT_DIR,'address-mobile.png')});
     }
     // A real ready feed is rendered and opens cached comp analysis without a paid scan.
-    const B = require('../buy-box.js');
+    const B = require('../buy-box.js');// screening uses deal-model.js defaults
     const row={id:'test-listing',address:fixture.address,price:160000,status:'Active',
       bedrooms:3,bathrooms:2,squareFootage:1657,propertyType:'Single Family',distance:5,
       change:'new',valuationState:'ready',valuedAt:new Date().toISOString(),

@@ -1,12 +1,18 @@
 {
   "name": "kytalyst-deal-analyzer",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
-    "test": "node --test tests/rehab-budget.test.js tests/discovery.test.cjs && node tests/dom.test.cjs",
-    "test:browser": "node tests/browser.test.cjs"
+    "test": "node --test tests/rehab-budget.test.js tests/deal-model.test.cjs tests/discovery.test.cjs && node tests/dom.test.cjs",
+    "test:browser": "node tests/browser.test.cjs && node tests/accounts.browser.test.cjs",
+    "test:function": "node --test tests/function.test.cjs",
+    "test:all": "firebase emulators:exec --only auth,firestore --project demo-kytalyst \"npm test && npm run test:function && npm run test:rules && npm run test:browser\"",
+    "test:rules": "node --test tests/rules.test.cjs"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.4.0",
+    "firebase-tools": "15.37.0",
     "linkedom": "0.18.12",
     "playwright": "1.56.1"
   }

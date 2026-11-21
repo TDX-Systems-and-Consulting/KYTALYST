@@ -1,23 +1,36 @@
 #!/bin/bash
-# Deploy kytalystScan Cloud Function
-# Run from anywhere: ~/Documents/kytalyst-fn/deploy-function.sh
+# Deploy the kytalystScan Cloud Function to the KYTALYST Firebase project.
+# Usage (Google Cloud Shell, or any machine with gcloud):  ./deploy-function.sh <kytalyst-project-id>
+# Node 22, 2nd gen, secrets from Secret Manager (you create those yourself; keys never go in code).
+set -euo pipefail
 
-GCLOUD="$HOME/google-cloud-sdk/bin/gcloud"
-PYTHON="/opt/homebrew/bin/python3.12"
-FUNCTION_DIR="$HOME/Documents/kytalyst-fn/functions"
+PROJECT="${1:?Pass the KYTALYST Firebase project ID, e.g. ./deploy-function.sh kytalyst-12345}"
+GCLOUD="${GCLOUD:-$(command -v gcloud || echo "$HOME/google-cloud-sdk/bin/gcloud")}"
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "Pulling latest source..."
-cd ~/Documents/kytalyst-fn && git pull
+git -C "$REPO_DIR" pull --ff-only
 
-echo "Deploying kytalystScan..."
-CLOUDSDK_PYTHON=$PYTHON $GCLOUD functions deploy kytalystScan \
-  --runtime nodejs20 \
+echo "Checking function syntax..."
+node -c "$REPO_DIR/functions/index.js"
+
+echo "Deploying kytalystScan to $PROJECT..."
+"$GCLOUD" functions deploy kytalystScan \
+  --project "$PROJECT" \
+  --region us-central1 \
+  --gen2 \
+  --runtime nodejs22 \
   --trigger-http \
   --allow-unauthenticated \
   --entry-point kytalystScan \
-  --source $FUNCTION_DIR \
-  --project kytrac-72d91 \
-  --region us-central1 \
-  --no-gen2
+  --source "$REPO_DIR/functions" \
+  --memory 512Mi \
+  --timeout 60s \
+  --set-secrets "RENTCAST_API_KEY=RENTCAST_API_KEY:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest" \
+  --set-env-vars "SCAN_DAILY_LIMIT=50"
 
-echo "Done."
+# Allowed websites default to tdx-kytalyst.com (see ALLOWED_ORIGINS in functions/index.js).
+# --allow-unauthenticated only lets the request reach the code; the code itself
+# rejects anyone without a KYTALYST sign-in token or from another website.
+echo "Done. Function URL:"
+"$GCLOUD" functions describe kytalystScan --project "$PROJECT" --region us-central1 --gen2 --format='value(url)'

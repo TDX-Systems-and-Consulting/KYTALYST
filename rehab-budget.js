@@ -20,19 +20,16 @@
     if (!Number.isSafeInteger(Math.round(amount * 110))) throw new Error('Rehab budget is too large.');
     return { amount, low: round(amount * 0.9), high: round(amount * 1.1) };
   }
-  function evaluate({ listPrice, arv, rehabTotal, wantedProfit = 30000 }) {
-    const price = number(listPrice, 'Purchase price', true);
-    const value = number(arv, 'ARV', true);
-    const rehab = number(rehabTotal, 'Rehab total');
-    const target = number(wantedProfit, 'Target profit');
-    const closingRate = 0.035;
-    const sellingCosts = value * (0.0125 + 0.03 + 0.06);
-    const allInCost = price + rehab + price * closingRate;
-    const projectedProfit = value - sellingCosts - allInCost;
-    // Acquisition closing costs scale with the offered price, not the asking price.
-    const mao = (value - sellingCosts - rehab - target) / (1 + closingRate);
-    return { projectedProfit: round(projectedProfit), isDeal: projectedProfit >= target,
-      mao: round(mao), allInCost: round(allInCost) };
+  // All deal math lives in deal-model.js; this keeps the original call shape working.
+  const Model = (typeof module === 'object' && module.exports) ? require('./deal-model.js')
+    : (typeof globalThis !== 'undefined' ? globalThis.DealModel : undefined);
+  function evaluate({ listPrice, arv, rehabTotal, wantedProfit, assumptions }) {
+    if (!Model) throw new Error('The deal calculator could not load.');
+    const a = Object.assign({}, assumptions || {});
+    if (wantedProfit !== undefined) a.targetProfit = wantedProfit;
+    const d = Model.evaluate({ purchasePrice: listPrice, arv, rehab: rehabTotal, assumptions: a });
+    d.allInCost = d.totalCost;
+    return d;
   }
   function key(address) {
     return 'kytalyst-hipshot-v2:' + String(address).trim().toLowerCase().replace(/\s+/g, ' ');

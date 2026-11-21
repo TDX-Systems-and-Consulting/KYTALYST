@@ -10,9 +10,10 @@ test('invalid Hipshots cannot produce a verdict',()=>{
   for(const n of ['',null,undefined,-1,Infinity,'NaN',true,1e300]) assert.throws(()=>budget.hipshot(n));
 });
 test('profit uses entered amount without adding the 10 percent range',()=>{
-  const d=budget.evaluate({listPrice:160000,arv:255000,rehabTotal:budget.hipshot(30000).amount});
+  const cash={financing:'cash',monthlyHolding:0};
+  const d=budget.evaluate({listPrice:160000,arv:255000,rehabTotal:budget.hipshot(30000).amount,assumptions:cash});
   assert.equal(d.projectedProfit,33262.5);
-  const atOffer=budget.evaluate({listPrice:d.mao,arv:255000,rehabTotal:30000});
+  const atOffer=budget.evaluate({listPrice:d.mao,arv:255000,rehabTotal:30000,assumptions:cash});
   assert.ok(Math.abs(atOffer.projectedProfit-30000)<=0.01);
 });
 test('missing price or ARV cannot produce a verdict',()=>{

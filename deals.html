@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KYTALYST — My deals</title><meta name="theme-color" content="#101917">
+<link rel="stylesheet" href="design.css?v=accounts-1">
+</head><body>
+<header class="topbar"><a class="brand" href="./"><span class="brand-icon" aria-hidden="true">↗</span><span><span class="wordmark">KYTA<span>LYST</span></span><span class="tagline">Your deal history</span></span></a><div class="nav-actions"><a class="daily-nav" href="index.html">Scan address</a><a class="daily-nav" href="daily.html">Daily matches ↗</a><span id="accountSlot" class="account-slot"></span><button id="themeToggleBtn" class="theme-toggle" onclick="toggleTheme()">☀ Light</button></div></header>
+<main>
+<section class="daily-intro"><div class="eyebrow">Every property you've run</div><h1>My <em>deals.</em></h1><p>Saved automatically when you set a Hipshot, change the numbers or update a deal's status.</p></section>
+<section class="section" id="dealsSection">
+  <div class="section-head"><span>Deal history</span><span class="section-tag" id="dealsCount"></span></div>
+  <div class="deals-toolbar">
+    <label>Status<select id="dealsFilter" onchange="renderDeals()"><option value="all">All deals</option></select></label>
+    <label>Sort by<select id="dealsSort" onchange="renderDeals()">
+      <option value="updated">Most recent</option><option value="profit">Highest profit</option>
+      <option value="return">Best return on cash</option><option value="price">Lowest price</option>
+    </select></label>
+  </div>
+  <p id="dealsStatus" class="budget-note" role="status">Loading your deals…</p>
+  <div id="dealsList" class="deals-list"></div>
+</section>
+</main>
+<footer class="site-footer"><span class="footer-brand">KYTALYST <i>by TDX Systems &amp; Consulting</i></span><span>Figures use the assumptions saved with each deal.</span></footer>
+<script src="kytalyst-config.js?v=accounts-1"></script>
+<script type="module" src="account.js?v=accounts-1"></script>
+<script src="auth-ui.js?v=accounts-1"></script>
+<script src="deals.js?v=accounts-1"></script>
+</body></html>
