@@ -1,12 +1,11 @@
 #!/bin/bash
 # Deploy the kytalystScan Cloud Function to the KYTALYST Firebase project.
-# Usage (from your KYTALYST clone):  ./deploy-function.sh <kytalyst-project-id>
+# Usage (Google Cloud Shell, or any machine with gcloud):  ./deploy-function.sh <kytalyst-project-id>
 # Node 22, 2nd gen, secrets from Secret Manager (you create those yourself; keys never go in code).
 set -euo pipefail
 
 PROJECT="${1:?Pass the KYTALYST Firebase project ID, e.g. ./deploy-function.sh kytalyst-12345}"
-GCLOUD="${GCLOUD:-$HOME/google-cloud-sdk/bin/gcloud}"
-export CLOUDSDK_PYTHON="${CLOUDSDK_PYTHON:-/opt/homebrew/bin/python3.12}"
+GCLOUD="${GCLOUD:-$(command -v gcloud || echo "$HOME/google-cloud-sdk/bin/gcloud")}"
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "Pulling latest source..."
